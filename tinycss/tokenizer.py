@@ -125,4 +125,5 @@ def tokenize(string, ignore_comments=True):
                 ignore_comments and
                 candidate_name in ('COMMENT', 'BAD_COMMENT')
             ):
+                # TODO: parse numbers and unicode escapes, extract URLs
                 yield candidate_name, candidate_value
