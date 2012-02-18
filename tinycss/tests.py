@@ -8,8 +8,11 @@
 """
 
 
-import tinycss
+from tinycss.tokenizer import tokenize
 
 
-def test_foo():
-    assert tinycss.VERSION
+def test_tokenizer():
+    assert list(tokenize('red -->')) == [
+        ('IDENT', 'red'), ('S', ' '), ('CDC', '-->')]
+    # Longest match rule:
+    assert list(tokenize('red-->')) == [('IDENT', 'red--'), ('DELIM', '>')]
