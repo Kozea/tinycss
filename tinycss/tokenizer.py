@@ -12,10 +12,10 @@
 
 from __future__ import unicode_literals
 
-import functools
-import string
-import sys
 import re
+import sys
+import functools
+from string import Formatter
 
 
 # * Raw strings with the r'' notation are used so that \ do not need
@@ -62,7 +62,7 @@ MACROS = r'''
     baduri2	url\({w}{string}{w}
     baduri3	url\({w}{badstring}
     baduri	{baduri1}|{baduri2}|{baduri3}
-'''
+'''.replace(r'\0', '\0').replace(r'\237', '\237')
 
 TOKENS = r'''
     IDENT	{ident}
@@ -102,7 +102,7 @@ def _init():
     """Import-time initialization."""
     COMPILED_MACROS.clear()
     expand_macros = functools.partial(
-        string.Formatter().vformat, args=(), kwargs=COMPILED_MACROS)
+        Formatter().vformat, args=(), kwargs=COMPILED_MACROS)
 
     for line in MACROS.strip().splitlines():
         name, value = line.split('\t')
@@ -162,57 +162,77 @@ def tokenize(string, ignore_comments=True):
     while pos < len_string:
         # Find the longest match
         length = 0
-        for this_name, regexp in compiled_tokens:
+        type_ = None
+        for this_type, regexp in compiled_tokens:
             this_match = regexp.match(string, pos)
-            if this_match is None:
-                continue
-            this_value = this_match.group()
-            this_length = len(this_value)
-            if this_length > length:
-                match = this_match
-                name = this_name
-                value = this_value
-                length = this_length
-        if length == 0:  # No match
-            # "Any other character not matched by the above rules,
-            #  and neither a single nor a double quote."
-            # ... but quotes at the start of a token are always matched
-            # by STRING or BADSTRING. So DELIM is any single character.
-            yield 'DELIM', string[pos]
-            pos += 1
-        else:
-            pos += length
-            if ignore_comments and name in ('COMMENT', 'BAD_COMMENT'):
-                continue
-
-            if name in ('DIMENSION', 'PERCENTAGE', 'NUMBER'):
-                if name == 'PERCENTAGE':
-                    value = value[:-1]
-                elif name == 'DIMENSION':
+            if this_match is not None:
+                this_value = this_match.group()
+                this_length = len(this_value)
+                if this_length > length:
+                    match = this_match
+                    type_ = this_type
+                    css_value = this_value
+                    length = this_length
+        if not (ignore_comments and type_ == 'COMMENT'):
+            if type_ is None:  # No match
+                # "Any other character not matched by the above rules,
+                #  and neither a single nor a double quote."
+                # ... but quotes at the start of a token are always matched
+                # by STRING or BADSTRING. So DELIM is any single character.
+                type_ = 'DELIM'
+                css_value = value = string[pos]
+                length = 1
+            else:
+                # Parse number, extract strings and URIs, unescape
+                if type_ in ('DIMENSION', 'PERCENTAGE', 'NUMBER'):
+                    if type_ == 'PERCENTAGE':
+                        value = css_value[:-1]
+                    elif type_ == 'DIMENSION':
+                        value = match.group(1)
+                        unit = match.group(2)
+                        unit = unicode_unescape(unit)
+                        unit = simple_unescape(unit)
+                    else: # NUMBER
+                        value = css_value
+                    if '.' in value:
+                        value = float(value)
+                    else:
+                        value = int(value)
+                    if type_ == 'DIMENSION':
+                        value = value, unit
+                elif type_ in ('IDENT', 'ATKEYWORD', 'HASH', 'FUNCTION'):
+                    value = unicode_unescape(css_value)
+                    value = simple_unescape(value)
+                elif type_ == 'URI':
                     value = match.group(1)
-                    unit = match.group(2)
-                    unit = unicode_unescape(unit)
-                    unit = simple_unescape(unit)
-                if '.' in value:
-                    value = float(value)
-                else:
-                    value = int(value)
-                if name == 'DIMENSION':
-                    value = value, unit
-            elif name in ('IDENT', 'ATKEYWORD', 'HASH', 'FUNCTION'):
-                value = unicode_unescape(value)
-                value = simple_unescape(value)
-            elif name == 'URI':
-                value = match.group(1)
-                if value and value[0] in '"\'':
-                    value = value[1:-1]  # Remove quotes
+                    if value and value[0] in '"\'':
+                        value = value[1:-1]  # Remove quotes
+                        value = newline_unescape(value)
+                    value = unicode_unescape(value)
+                    value = simple_unescape(value)
+                elif type_ == 'STRING':
+                    value = css_value[1:-1]  # Remove quotes
                     value = newline_unescape(value)
-                value = unicode_unescape(value)
-                value = simple_unescape(value)
-            elif name == 'STRING':
-                value = value[1:-1]  # Remove quotes
-                value = newline_unescape(value)
-                value = unicode_unescape(value)
-                value = simple_unescape(value)
+                    value = unicode_unescape(value)
+                    value = simple_unescape(value)
+                else:
+                    value = css_value
+            yield Token(type_, css_value, value, pos)
+        pos += length
 
-            yield name, value
+
+class Token(object):
+    def __init__(self, type_, css_value, value, position):
+        self.type = type_
+        self.css_value = css_value
+        self.value = value
+        self.position = position
+
+    def replace_type(self, new_type):
+        return Token(new_type, self.css_value, self.value, self.position)
+
+    def replace_value(self, new_value):
+        return Token(self.type, self.css_value, new_value, self.position)
+
+    def __repr__(self):
+        return '<Token {} {!r} at {}>'.format(self.type, self.value, self.position)

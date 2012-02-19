@@ -72,5 +72,6 @@ foo(int x) {\
 
 ])
 def test_tokenizer(input_css, expected_tokens):
-    result = list(tokenize(input_css, ignore_comments=False))
+    tokens = tokenize(input_css, ignore_comments=False)
+    result = [(token.type, token.value) for token in tokens]
     assert result == expected_tokens
