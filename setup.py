@@ -16,6 +16,6 @@ setup(
     license='BSD',
     author='Simon Sapin',
     author_email='simon.sapin@exyr.org',
-    description='A CSS parser, and nothing else.',
+    description='A CSS parser, and nothing else.',
     packages=find_packages(),
 )
