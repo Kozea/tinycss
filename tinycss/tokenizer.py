@@ -136,6 +136,8 @@ SIMPLE_UNESCAPE = functools.partial(
     re.compile(r'\\(.)').sub,
     r'\1')
 
+FIND_NEWLINES = re.compile(COMPILED_MACROS['nl']).finditer
+
 
 def tokenize(string, ignore_comments=True):
     """
@@ -156,8 +158,11 @@ def tokenize(string, ignore_comments=True):
     unicode_unescape = UNICODE_UNESCAPE
     newline_unescape = NEWLINE_UNESCAPE
     simple_unescape = SIMPLE_UNESCAPE
+    find_newlines = FIND_NEWLINES
 
     pos = 0
+    line = 1
+    column = 1
     len_string = len(string)
     while pos < len_string:
         # Find the longest match
@@ -217,22 +222,30 @@ def tokenize(string, ignore_comments=True):
                     value = simple_unescape(value)
                 else:
                     value = css_value
-            yield Token(type_, css_value, value, pos)
+            yield Token(type_, css_value, value, line, column)
         pos += length
+        newlines = list(find_newlines(css_value))
+        if newlines:
+            line += len(newlines)
+            # Have line start at column 1
+            column = length - newlines[-1].end() + 1
+        else:
+            column += length
+
 
 
 class Token(object):
-    def __init__(self, type_, css_value, value, position):
+    def __init__(self, type_, css_value, value, line, column):
         self.type = type_
         self.css_value = css_value
         self.value = value
-        self.position = position
-
-    def replace_type(self, new_type):
-        return Token(new_type, self.css_value, self.value, self.position)
+        self.line = line
+        self.column = column
 
     def replace_value(self, new_value):
-        return Token(self.type, self.css_value, new_value, self.position)
+        return Token(self.type, self.css_value, new_value,
+                     self.line, self.column)
 
     def __repr__(self):
-        return '<Token {} {!r} at {}>'.format(self.type, self.value, self.position)
+        return '<Token {} {!r} at {}:{}>'.format(
+            self.type, self.value, self.line, self.column)

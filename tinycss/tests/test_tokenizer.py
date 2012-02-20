@@ -71,7 +71,21 @@ foo(int x) {\
     (r'Lorem\110000Ipsum', [('IDENT', 'Lorem\uFFFDIpsum')]),
 
 ])
-def test_tokenizer(input_css, expected_tokens):
+def test_tokens(input_css, expected_tokens):
     tokens = tokenize(input_css, ignore_comments=False)
     result = [(token.type, token.value) for token in tokens]
     assert result == expected_tokens
+
+
+def test_positions():
+    """Test the reported line/column position of each token."""
+    css = '/* Lorem\nipsum */\fa {\n    color: red;\tcontent: "dolor\\\fsit" }'
+    tokens = tokenize(css, ignore_comments=False)
+    result = [(token.type, token.line, token.column) for token in tokens]
+    assert result == [
+        (u'COMMENT', 1, 1), (u'S', 2, 9),
+        (u'IDENT', 3, 1), (u'S', 3, 2), (u'{', 3, 3),
+        (u'S', 3, 4), (u'IDENT', 4, 5), (u':', 4, 10),
+        (u'S', 4, 11), (u'IDENT', 4, 12), (u';', 4, 15), (u'S', 4, 16),
+        (u'IDENT', 4, 17), (u':', 4, 24), (u'S', 4, 25), (u'STRING', 4, 26),
+        (u'S', 5, 5), (u'}', 5, 6)]

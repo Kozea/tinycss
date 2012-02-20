@@ -55,8 +55,6 @@ def regroup(tokens, end=None):
         type_ = token.type
         if type_ == end:
             return
-        elif type_ in ')]}':
-            yield token.replace_type('INVALID ' + type_)
 
         next_end = pairs.get(type_)
         if next_end is None:
