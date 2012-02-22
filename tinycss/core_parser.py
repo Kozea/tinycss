@@ -37,10 +37,130 @@ from .tokenizer import tokenize, COMPILED_MACROS
 
 
 def parse(string):
-    """Same a :func:`parse_stylesheet`, but takes CSS as an unicode string.
+    """
+    :param string: a CSS stylesheet as an unicode string
+    :return: a :class:`Stylesheet`
     """
     tokens = regroup(iter(tokenize(string)))
     return parse_stylesheet(tokens)
+
+
+class Stylesheet(object):
+    """
+    A parsed CSS stylesheet.
+
+    .. attribute:: rules
+        a mixed list of :class:`AtRule` and :class:`RuleSets` as returned by
+        :func:`parse_at_rule` and :func:`parse_ruleset`, in source order
+
+    .. attribute:: errors
+        a list of :class:`ParseError`
+
+    """
+    def __init__(self, rules, errors):
+        self.rules = rules
+        self.errors = errors
+
+    def pretty(self):
+        """Return an indented string representation for debugging"""
+        lines = [rule.pretty() for rule in self.rules] + [
+                 e.message for e in self.errors]
+        return '\n'.join(lines)
+
+
+class AtRule(object):
+    """
+    An unparsed at-rule.
+
+    .. attribute:: at_keyword
+        The normalized (lower-case) at-keyword as a string. eg. '@page'
+
+    .. attribute:: head
+        The "head" of the at-rule until ';' or '{': a list of tokens
+        (:class:`Token` or :class:`ContainerToken`)
+
+    .. attribute:: body
+        A block as a '{' :class:`ContainerToken`, or ``None`` if the at-rule
+        ends with ';'
+
+    The head was validated against the core grammar but **not** the body,
+    as the body might contain declarations. In case of an error in a
+    declaration, parsing should continue from the next declaration.
+    The whole rule should not be ignored as it would be for an error
+    in the head.
+
+    You are expected to parse and validate these at-rules yourself.
+
+    """
+    def __init__(self, at_keyword, head, body):
+        self.at_keyword = at_keyword
+        self.head = head
+        self.body = body
+
+    def pretty(self):
+        """Return an indented string representation for debugging"""
+        lines = [self.at_keyword]
+        for token in self.head:
+            for line in token.pretty().splitlines():
+                lines.append('    ' + line)
+        if self.body:
+            lines.append(self.body.pretty())
+        else:
+            lines.append(';')
+        return '\n'.join(lines)
+
+
+class RuleSet(object):
+    """A ruleset.
+
+    .. attribute:: at_keyword
+        Always ``None``. Helps to tell rulesets apart from at-rules.
+
+    .. attribute:: selector
+        A (possibly empty) :class:`ContainerToken`
+
+    .. attribute:: declarations
+        The list of :class:`Declaration` as returned by
+        :func:`parse_declaration_list`, in source order.
+
+    """
+    def __init__(self, selector, declarations):
+        self.selector = selector
+        self.declarations = declarations
+
+    def pretty(self):
+        """Return an indented string representation for debugging"""
+        lines = [self.selector.pretty(), '{']
+        for declaration in self.declarations:
+            for line in declaration.pretty().splitlines():
+                lines.append('    ' + line)
+        lines.append('}')
+        return '\n'.join(lines)
+
+    at_keyword = None
+
+
+class Declaration(object):
+    """A property declaration.
+
+    .. attribute:: name
+        The property name as a normalized (lower-case) string.
+
+    .. attribute:: values
+        The property value: a list of tokens as returned by :func:`parse_value`.
+
+    """
+    def __init__(self, name, values):
+        self.name = name
+        self.values = values
+
+    def pretty(self):
+        """Return an indented string representation for debugging"""
+        lines = [self.name + ':']
+        for token in self.values:
+            for line in token.pretty().splitlines():
+                lines.append('    ' + line)
+        return '\n'.join(lines)
 
 
 class ContainerToken(object):
@@ -67,6 +187,7 @@ class ContainerToken(object):
         return (format_string + ' {0.content}').format(self)
 
     def pretty(self):
+        """Return an indented string representation for debugging"""
         lines = [self.format_string.format(self)]
         for token in self.content:
             for line in token.pretty().splitlines():
@@ -86,12 +207,30 @@ class FunctionToken(ContainerToken):
 
 
 
+class ParseError(ValueError):
+    """A recoverable parsing error."""
+    def __init__(self, token, reason):
+        self.token = token
+        self.message = 'Parse error at {0}:{1}, {2}'.format(
+            token.line, token.column, reason)
+
+    def __repr__(self):
+        return '<{0}: {1}>'.format(type(self).__name__, self.message)
+
+
+class UnexpectedTokenError(ParseError):
+    """A special kind of parsing error: a token of the wrong type was found."""
+    def __init__(self, token, context):
+        super(UnexpectedToken, self).__init__(
+            token, 'unexpected {0} token in {1}'.format(token.type, context))
+
+
 def regroup(tokens, stop_at=None):
     """
     Match pairs of tokens: () [] {} function()
     (Strings in "" or '' are taken care of by the tokenizer.)
 
-    Opening tokens are replaced by a  :class:`ContainerToken`.
+    Opening tokens are replaced by a :class:`ContainerToken`.
     Closing tokens are removed. Unmatched closing tokens are invalid
     but left as-is. All nested structures that are still open at
     the end of the stylesheet are implicitly closed.
@@ -126,42 +265,13 @@ def regroup(tokens, stop_at=None):
                                      token.line, token.column)
 
 
-class ParseError(ValueError):
-    """A recoverable parsing error."""
-    def __init__(self, token, reason):
-        self.token = token
-        self.message = 'Parse error at {}:{}, {}'.format(
-            token.line, token.column, reason)
-
-    def __repr__(self):
-        return '<{0}: {1}>'.format(type(self).__name__, self.message)
-
-
-class UnexpectedTokenError(ParseError):
-    """A special kind of parsing error: a token of the wrong type was found."""
-    def __init__(self, token, context):
-        super(UnexpectedToken, self).__init__(
-            token, 'unexpected {} token in {}'.format(token.type, context))
-
-
 def parse_stylesheet(tokens):
     """Parse an stylesheet.
 
     :param tokens:
         an iterable of tokens.
     :return:
-        a tuple of a list of rules and an a list of :class:`ParseError`.
-
-        * At-rules are tuples of at-keyword, head and body as returned by
-          :func:`parse_at_rule`
-        * Rulesets are tuples of at-keyword, selector and declaration list,
-          where the at-keyword is always ``None``. This helps telling them
-          apart from at-rules. (See :func:`parse_ruleset`.)
-
-    :raises:
-        :class:`ParseError` if the at-rule is invalid for the core grammar.
-        Note a that an at-rule can be valid for the core grammar but
-        not for CSS 2.1 or another level.
+        a :class:`Stylesheet`
 
     """
     rules = []
@@ -172,39 +282,29 @@ def parse_stylesheet(tokens):
                 if token.type == 'ATKEYWORD':
                     rules.append(parse_at_rule(token, tokens))
                 else:
-                    selector, declarations, rule_errors = parse_ruleset(
-                        token, tokens)
-                    rules.append((None, selector, declarations))
+                    rule, rule_errors = parse_ruleset(token, tokens)
+                    rules.append(rule)
                     errors.extend(rule_errors)
             except ParseError as e:
                 errors.append(e)
                 # Skip the entire rule
-    return rules, errors
+    return Stylesheet(rules, errors)
 
 
 def parse_at_rule(at_keyword_token, tokens):
     """Parse an at-rule.
 
     :param at_keyword_token:
-        The ATKEYWORD token that start this at-rule
+        The ATKEYWORD token that starts this at-rule
         You may have read it already to distinguish the rule from a ruleset.
     :param tokens:
         an iterator of subsequent tokens. Will be consumed just enough
         for one at-rule.
     :return:
-        a tuple of an at-keyword, a head and a body
-
-        * The at-keyword is a lower-case string, eg. '@import'
-        * The head is a (possibly empty) list of tokens
-        * The body is a block token, or ``None`` if the at-rule ends with ';'.
-
+        an :class:`AtRule`
     :raises:
         :class:`ParseError` if the head is invalid for the core grammar.
-        The body is **not** validated. This is because it might contain
-        declarations. In case of an error in a declaration parsing should
-        continue from the next declaration; the whole rule should not
-        be ignored.
-        You are expected to parse and validate (or ignore) at-rules yourself.
+        The body is **not** validated. See :class:`AtRule`.
 
     """
     # CSS syntax is case-insensitive
@@ -218,7 +318,7 @@ def parse_at_rule(at_keyword_token, tokens):
                 body = token
             else:
                 body = None
-            return at_keyword, head, body
+            return AtRule(at_keyword, head, body)
         # Ignore white space just after the at-keyword, but keep it afterwards
         elif head or token.type != 'S':
             head.append(token)
@@ -234,13 +334,9 @@ def parse_ruleset(first_token, tokens):
         an iterator of subsequent tokens. Will be consumed just enough
         for one ruleset.
     :return:
-        a tuple of a selector, a declarations list and an error list.
-
-        * The selector is a (possibly empty) new :class:`ContainerToken`
-        * The declaration list is as returned by :func:`parse_declaration_list`
-        * The errors are recovered :class:`ParseError` in declarations.
-          (Parsing continues from the next declaration on such errors.)
-
+        a tuple of a :class:`RuleSet` and an error list.
+        The errors are recovered :class:`ParseError` in declarations.
+        (Parsing continues from the next declaration on such errors.)
     :raises:
         :class:`ParseError` if the selector is invalid for the core grammar.
         Note a that a selector can be valid for the core grammar but
@@ -257,7 +353,7 @@ def parse_ruleset(first_token, tokens):
             selector = ContainerToken(
                 'SELECTOR', '', '', selector_parts, start.line, start.column)
             declarations, errors = parse_declaration_list(token.content)
-            return selector, declarations, errors
+            return RuleSet(selector, declarations), errors
         else:
             selector_parts.append(token)
 
@@ -273,8 +369,8 @@ def parse_declaration_list(tokens):
         an iterable of tokens. Should stop at (before) the end of the block,
         as marked by a '}'.
     :return:
-        a tuple of the list of valid declarations as returned by
-        :func:`parse_declaration` and a list of :class:`ParseError`
+        a tuple of the list of valid :class`Declaration` and a list
+        of :class:`ParseError`
 
     """
     # split at ';'
@@ -311,8 +407,7 @@ def parse_declaration(tokens):
         Empty declarations (ie. consecutive ';' with only white space
         in-between) should skipped and not passed to this function.
     :returns:
-        a tuple of the property name as a lower-case string and the
-        value list as returned by :func:`parse_value`.
+        a :class:`Declaration`
     :raises:
         :class:`ParseError` if the tokens do not match the 'declaration'
         production of the core grammar.
@@ -338,7 +433,7 @@ def parse_declaration(tokens):
     value = parse_value(tokens)
     if not value:
         raise ParseError(token, 'expected a property value')
-    return property_name, value
+    return Declaration(property_name, value)
 
 
 def parse_value(tokens):
@@ -412,19 +507,4 @@ if __name__ == '__main__':
     import sys, pprint
     with open(sys.argv[1], 'rb') as fd:
         content = fd.read().decode('utf8')
-    rules, errors = parse(content)
-    print(len(rules), len(errors))
-    for at, head, body in rules:
-        print(at)
-        if at:
-            for v in head:
-                print (v.pretty())
-            print (body.pretty())
-        else:
-            print (head.pretty())
-            for n, v in body:
-                print(n)
-                for vv in v:
-                    print(vv.pretty())
-    for e in errors:
-        print(e)
+    print(parse(content).pretty())

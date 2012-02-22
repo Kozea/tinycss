@@ -244,7 +244,8 @@ class Token(object):
         self.column = column
 
     def __repr__(self):
-        return '<Token {} {!r} at {}:{}>'.format(
-            self.type, self.value, self.line, self.column)
+        return self.format_string.format(self)
 
+    # For debugging:
     pretty = __repr__
+    format_string = '<Token {0.type} at {0.line}:{0.column} {0.value!r}>'
