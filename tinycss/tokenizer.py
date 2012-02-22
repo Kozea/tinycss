@@ -235,17 +235,16 @@ def tokenize(string, ignore_comments=True):
 
 
 class Token(object):
+    """A single atomic token"""
     def __init__(self, type_, css_value, value, line, column):
         self.type = type_
-        self.css_value = css_value
+        self.as_css = css_value
         self.value = value
         self.line = line
         self.column = column
 
-    def replace_value(self, new_value):
-        return Token(self.type, self.css_value, new_value,
-                     self.line, self.column)
-
     def __repr__(self):
         return '<Token {} {!r} at {}:{}>'.format(
             self.type, self.value, self.line, self.column)
+
+    pretty = __repr__

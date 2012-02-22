@@ -37,88 +37,185 @@ from .tokenizer import tokenize, COMPILED_MACROS
 
 
 def parse(string):
-    tokens = regroup(iter(tokenize(string)))
-    return list(parse_stylesheet(tokens))
-
-
-def regroup(tokens, end=None):
+    """Same a :func:`parse_stylesheet`, but takes CSS as an unicode string.
     """
-    Take a flat *iterator* of tokens and match pairs: () [] {} function()
+    tokens = regroup(iter(tokenize(string)))
+    return parse_stylesheet(tokens)
+
+
+class ContainerToken(object):
+    """A token that contains other (nested) tokens."""
+    def __init__(self, type_, css_start, css_end, content, line, column):
+        self.type = type_
+        self.css_start = css_start
+        self.css_end = css_end
+        self.content = content
+        self.line = line
+        self.column = column
+
+    @property
+    def as_css(self):
+        parts = [self.css_start]
+        parts.extend(token.as_css for token in self.content)
+        parts.append(self.css_end)
+        return ''.join(parts)
+
+
+    format_string = '<ContainerToken {0.type} at {0.line}:{0.column}>'
+
+    def __repr__(self):
+        return (format_string + ' {0.content}').format(self)
+
+    def pretty(self):
+        lines = [self.format_string.format(self)]
+        for token in self.content:
+            for line in token.pretty().splitlines():
+                lines.append('    ' + line)
+        return '\n'.join(lines)
+
+
+class FunctionToken(ContainerToken):
+    """Specialized :class:`ContainerToken` that also hold a function name."""
+    def __init__(self, type_, css_start, css_end, function_name, content,
+                 line, column):
+        super(FunctionToken, self).__init__(
+            type_, css_start, css_end, content, line, column)
+        self.function_name = function_name
+
+    format_string = '<FunctionToken {0.function_name}() at {0.line}:{0.column}>'
+
+
+
+def regroup(tokens, stop_at=None):
+    """
+    Match pairs of tokens: () [] {} function()
     (Strings in "" or '' are taken care of by the tokenizer.)
 
-    The result is a tree: opening tokens get their value replaced by the
-    list of their "child" tokens, and closing tokens are removed.
+    Opening tokens are replaced by a  :class:`ContainerToken`.
+    Closing tokens are removed. Unmatched closing tokens are invalid
+    but left as-is. All nested structures that are still open at
+    the end of the stylesheet are implicitly closed.
+
+    :param tokens:
+        a *flat* iterator of tokens, as returned by
+        :func:`~tinycss.tokenizer.tokenize`
+    :param stop_at:
+        only used for recursion
+    :return:
+        A tree of tokens.
 
     """
     pairs = {'FUNCTION': ')', '(': ')', '[': ']', '{': '}'}
     for token in tokens:
         type_ = token.type
-        if type_ == end:
+        if type_ == stop_at:
             return
 
-        next_end = pairs.get(type_)
-        if next_end is None:
+        end = pairs.get(type_)
+        if end is None:
             yield token  # Not a grouping token
         else:
-            content = list(regroup(tokens, next_end))
+            content = list(regroup(tokens, end))
             if type_ == 'FUNCTION':
-                # Include function name
-                content = token.value, content
-            yield token.replace_value(content)
+                yield FunctionToken(token.type, token.as_css, end,
+                                    token.value, content,
+                                    token.line, token.column)
+            else:
+                yield ContainerToken(token.type, token.as_css, end,
+                                     content,
+                                     token.line, token.column)
 
 
-class UnexpectedToken(ValueError):
+class ParseError(ValueError):
+    """A recoverable parsing error."""
     def __init__(self, token, reason):
         self.token = token
-        self.reason = reason
+        self.message = 'Parse error at {}:{}, {}'.format(
+            token.line, token.column, reason)
 
-    def warn(self):
-        warn('Unexpected token {}, {}'.format(self.token, self.reason))
+    def __repr__(self):
+        return '<{0}: {1}>'.format(type(self).__name__, self.message)
 
 
-def warn(message):
-    # TODO: use the logging module
-    print(message, file=sys.stderr)
+class UnexpectedTokenError(ParseError):
+    """A special kind of parsing error: a token of the wrong type was found."""
+    def __init__(self, token, context):
+        super(UnexpectedToken, self).__init__(
+            token, 'unexpected {} token in {}'.format(token.type, context))
 
 
 def parse_stylesheet(tokens):
+    """Parse an stylesheet.
+
+    :param tokens:
+        an iterable of tokens.
+    :return:
+        a tuple of a list of rules and an a list of :class:`ParseError`.
+
+        * At-rules are tuples of at-keyword, head and body as returned by
+          :func:`parse_at_rule`
+        * Rulesets are tuples of at-keyword, selector and declaration list,
+          where the at-keyword is always ``None``. This helps telling them
+          apart from at-rules. (See :func:`parse_ruleset`.)
+
+    :raises:
+        :class:`ParseError` if the at-rule is invalid for the core grammar.
+        Note a that an at-rule can be valid for the core grammar but
+        not for CSS 2.1 or another level.
+
+    """
+    rules = []
+    errors = []
     for token in tokens:
         if token.type not in ('S', 'CDO', 'CDC'):
             try:
                 if token.type == 'ATKEYWORD':
-                    yield parse_at_rule(token.value, tokens)
+                    rules.append(parse_at_rule(token, tokens))
                 else:
-                    yield parse_ruleset(chain([token], tokens))
-            except UnexpectedToken as e:
-                e.warn()
+                    selector, declarations, rule_errors = parse_ruleset(
+                        token, tokens)
+                    rules.append((None, selector, declarations))
+                    errors.extend(rule_errors)
+            except ParseError as e:
+                errors.append(e)
                 # Skip the entire rule
+    return rules, errors
 
 
-def parse_ruleset(tokens):
-    selector_parts = []
-    for token in tokens:
-        if token.type == '{':
-            # Any of these can raise UnexpectedToken, but we’ve read the
-            # whole rule from the iterator.
+def parse_at_rule(at_keyword_token, tokens):
+    """Parse an at-rule.
 
-            at_keyword = None
-            # Individual values in selectors are not parsed. They are
-            # validated, but the entire selector is serialized as a string.
-            selector = ''.join(parse_selector(selector_parts))
-            declarations = list(parse_declarations(token.value))
-            return at_keyword, selector, declarations
-        else:
-            selector_parts.append(token)
+    :param at_keyword_token:
+        The ATKEYWORD token that start this at-rule
+        You may have read it already to distinguish the rule from a ruleset.
+    :param tokens:
+        an iterator of subsequent tokens. Will be consumed just enough
+        for one at-rule.
+    :return:
+        a tuple of an at-keyword, a head and a body
 
+        * The at-keyword is a lower-case string, eg. '@import'
+        * The head is a (possibly empty) list of tokens
+        * The body is a block token, or ``None`` if the at-rule ends with ';'.
 
-def parse_at_rule(at_keyword, tokens):
+    :raises:
+        :class:`ParseError` if the head is invalid for the core grammar.
+        The body is **not** validated. This is because it might contain
+        declarations. In case of an error in a declaration parsing should
+        continue from the next declaration; the whole rule should not
+        be ignored.
+        You are expected to parse and validate (or ignore) at-rules yourself.
+
+    """
+    # CSS syntax is case-insensitive
+    at_keyword = at_keyword_token.value.lower()
     head = []
     for token in tokens:
         if token.type in '{;':
-            head = [parse_any(token) if token.type != 'S' else token
-                    for token in head]
+            for head_token in head:
+                validate_any(head_token.value, 'at-rule head')
             if token.type == '{':
-                body = list(parse_block(token.value))
+                body = token
             else:
                 body = None
             return at_keyword, head, body
@@ -127,32 +224,59 @@ def parse_at_rule(at_keyword, tokens):
             head.append(token)
 
 
-def parse_selector(parts):
-    """Validate a selector and serialize it to string chunks."""
-    for token in parts:
-        type_ = token.type
-        if type_ in ('S', 'IDENT', 'HASH', 'DELIM', 'INCLUDES', 'DASHMATCH',
-                     'NUMBER', 'PERCENTAGE', 'DIMENSION', 'STRING', ':',
-                     'URI', 'UNICODE-RANGE'):
-            yield token.css_value
-        elif type_ == '[':
-            yield '['
-            yield ''.join(parse_selector(token.value))
-            yield ']'
-        elif type_ == '(':
-            yield '('
-            yield ''.join(parse_selector(token.value))
-            yield ')'
-        elif type_ == 'FUNCTION':
-            yield token.css_value  # function name
-            _unescaped_function_name, value = token.value
-            yield ''.join(parse_selector(value))
-            yield ')'
+def parse_ruleset(first_token, tokens):
+    """Parse a ruleset: a selector followed by declaration block.
+
+    :param first_token:
+        The first token of the ruleset (probably of the selector).
+        You may have read it already to distinguish the rule from an at-rule.
+    :param tokens:
+        an iterator of subsequent tokens. Will be consumed just enough
+        for one ruleset.
+    :return:
+        a tuple of a selector, a declarations list and an error list.
+
+        * The selector is a (possibly empty) new :class:`ContainerToken`
+        * The declaration list is as returned by :func:`parse_declaration_list`
+        * The errors are recovered :class:`ParseError` in declarations.
+          (Parsing continues from the next declaration on such errors.)
+
+    :raises:
+        :class:`ParseError` if the selector is invalid for the core grammar.
+        Note a that a selector can be valid for the core grammar but
+        not for CSS 2.1 or another level.
+
+    """
+    selector_parts = []
+    for token in chain([first_token], tokens):
+        if token.type == '{':
+            # Parse/validate once we’ve read the whole rule
+            for selector_token in selector_parts:
+                validate_any(selector_token, 'selector')
+            start = selector_parts[0] if selector_parts else token
+            selector = ContainerToken(
+                'SELECTOR', '', '', selector_parts, start.line, start.column)
+            declarations, errors = parse_declaration_list(token.content)
+            return selector, declarations, errors
         else:
-            raise UnexpectedToken(token, 'invalid in selector')
+            selector_parts.append(token)
 
 
-def parse_declarations(tokens):
+def parse_declaration_list(tokens):
+    """Parse a ';' separated declaration list.
+
+    If you have a block that contains declarations but not only
+    (like ``@page`` in CSS 3 Paged Media), you need to extract them
+    yourself and use :func:`parse_declaration` directly.
+
+    :param tokens:
+        an iterable of tokens. Should stop at (before) the end of the block,
+        as marked by a '}'.
+    :return:
+        a tuple of the list of valid declarations as returned by
+        :func:`parse_declaration` and a list of :class:`ParseError`
+
+    """
     # split at ';'
     parts = []
     this_part = []
@@ -161,94 +285,126 @@ def parse_declarations(tokens):
         if type_ == ';' and this_part:
             parts.append(this_part)
             this_part = []
-        # XXX skip white space?
-        elif type_ != 'S':
+        # skip white space at the start
+        elif this_part or type_ != 'S':
             this_part.append(token)
     if this_part:
         parts.append(this_part)
 
+    declarations = []
+    errors = []
     for part in parts:
         try:
-            yield parse_declaration(part)
-        except UnexpectedToken as e:
-            e.warn()
+            declarations.append(parse_declaration(part))
+        except ParseError as e:
+            errors.append(e)
             # Skip the entire declaration
+    return declarations, errors
 
 
 def parse_declaration(tokens):
+    """Parse a single declaration.
+
+    :param tokens:
+        an iterable of at least one token. Should stop at (before)
+        the end of the declaration, as marked by a ';' or '}'.
+        Empty declarations (ie. consecutive ';' with only white space
+        in-between) should skipped and not passed to this function.
+    :returns:
+        a tuple of the property name as a lower-case string and the
+        value list as returned by :func:`parse_value`.
+    :raises:
+        :class:`ParseError` if the tokens do not match the 'declaration'
+        production of the core grammar.
+
+    """
     tokens = iter(tokens)
-    def get(expected_type):
-        token = next(tokens, None)
-        if token is None:
-            raise UnexpectedToken(
-                None, 'expected %r for declaration' % expected_type)
-        if token.type != expected_type:
-            raise UnexpectedToken(
-                token, 'expected %r for declaration' % expected_type)
-        return token
-    property_name = get('IDENT').value
-    get(':')
-    return property_name, list(parse_values(tokens))
 
-
-def parse_values(tokens):
-    got_anything = False
-    for token in tokens:
-        type_ = token.type
-        if type_ == 'ATKEYWORD':
-            got_anything = True
-            yield token
-        elif type_ == '{':
-            got_anything = True
-            yield list(parse_block(token.value))
-        # XXX skip white space?
-        elif type_ != 'S':
-            got_anything = True
-            yield parse_any(token)
-    if not got_anything:
-        raise UnexpectedToken(None, 'missing value')
-
-
-def parse_block(tokens):
-    for token in tokens:
-        type_ = token.type
-        if type_ in (';', 'ATKEYWORD'):
-            yield token
-        elif type_ == '{':
-            yield token.replace_value(list(parse_block(token.value)))
-        # XXX skip white space?
-        elif type_ != 'S':
-            yield parse_any(token)
-
-
-def parse_any(token):
-    type_ = token.type
-    if type_ in ('IDENT', 'DIMENSION', 'PERCENTAGE', 'NUMBER', 'URI',
-                 'DELIM', 'STRING', 'HASH', 'ATKEYWORD', ':',
-                 'UNICODE-RANGE', 'INCLUDES', 'DASHMATCH'):
-        return token
-
-    elif type_ == 'FUNCTION':
-        function_name, arguments = token.value
-        parsed_arguments = []
-        for token in arguments:
-            # XXX skip white space?
-            if token.type != 'S':
-                parsed_arguments.append(parse_any(token))
-        value = function_name, arguments
-        return token.replace_value(value)
-
-    elif type_ in ('(', '['):
-        content = token.value
-        value = []
-        for token in content:
-            # XXX skip white space?
-            if token.type != 'S':
-                value.append(parse_any(token))
-        return token.replace_value(value)
-
+    token = next(tokens)  # assume there is at least one
+    if token.type == 'IDENT':
+        # CSS syntax is case-insensitive
+        property_name = token.value.lower()
     else:
-        raise UnexpectedToken(token, "invalid in 'any'")
+        raise UnexpectedToken(token, ', expected a property name')
+
+    for token in tokens:
+        if token.type == ':':
+            break
+        elif token.type != 'S':
+            raise UnexpectedToken(token, ", expected ':'")
+    else:
+        raise ParseError(token, "expected ':'")
+
+    value = parse_value(tokens)
+    if not value:
+        raise ParseError(token, 'expected a property value')
+    return property_name, value
+
+
+def parse_value(tokens):
+    """Parse a property value and return a list of tokens.
+
+    :param tokens:
+        an iterable of tokens
+    :return:
+        a list of tokens with white space removed at the start and end,
+        but not in the middle.
+    :raises:
+        :class:`ParseError` if there is any invalid token for the 'value'
+        production of the core grammar.
+
+    """
+    content = []
+    for token in tokens:
+        type_ = token.type
+        # Skip white space at the start
+        if content or type_ != 'S':
+            if type_ == '{':
+                validate_block(token, 'property value')
+            else:
+                validate_any(token, 'property value')
+            content.append(token)
+
+    # Remove white space at the end
+    while content and content[-1].type == 'S':
+        content.pop()
+    return content
+
+
+def validate_block(tokens, context):
+    """
+    :raises:
+        :class:`ParseError` if there is any invalid token for the 'block'
+        production of the core grammar.
+    :param tokens: an iterable of tokens
+    :param context: a string for the 'unexpected in ...' message
+
+    """
+    for token in tokens:
+        type_ = token.type
+        if type_ == '{':
+            validate_block(token.value, context)
+        elif type_ not in (';', 'ATKEYWORD'):
+            validate_any(token, context)
+
+
+def validate_any(token, context):
+    """
+    :raises:
+        :class:`ParseError` if this is an invalid token for the
+        'any' production of the core grammar.
+    :param token: a single token
+    :param context: a string for the 'unexpected in ...' message
+
+    """
+    type_ = token.type
+    if type_ in ('FUNCTION', '(', '['):
+        for token in token.content:
+            validate_any(token, type_)
+    elif type_ not in ('S', 'IDENT', 'DIMENSION', 'PERCENTAGE', 'NUMBER',
+                       'URI', 'DELIM', 'STRING', 'HASH', 'ATKEYWORD', ':',
+                       'UNICODE-RANGE', 'INCLUDES', 'DASHMATCH'):
+        raise UnexpectedToken(error_token, context)
 
 
 if __name__ == '__main__':
@@ -256,4 +412,19 @@ if __name__ == '__main__':
     import sys, pprint
     with open(sys.argv[1], 'rb') as fd:
         content = fd.read().decode('utf8')
-    pprint.pprint(parse(content))
+    rules, errors = parse(content)
+    print(len(rules), len(errors))
+    for at, head, body in rules:
+        print(at)
+        if at:
+            for v in head:
+                print (v.pretty())
+            print (body.pretty())
+        else:
+            print (head.pretty())
+            for n, v in body:
+                print(n)
+                for vv in v:
+                    print(vv.pretty())
+    for e in errors:
+        print(e)
