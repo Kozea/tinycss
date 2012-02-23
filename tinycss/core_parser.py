@@ -229,6 +229,7 @@ def parse_at_rule(at_keyword_token, tokens):
     # CSS syntax is case-insensitive
     at_keyword = at_keyword_token.value.lower()
     head = []
+    token = at_keyword_token  # For the ParseError in case `tokens` is empty
     for token in tokens:
         if token.type in '{;':
             for head_token in head:
@@ -241,6 +242,7 @@ def parse_at_rule(at_keyword_token, tokens):
         # Ignore white space just after the at-keyword, but keep it afterwards
         elif head or token.type != 'S':
             head.append(token)
+    raise ParseError(token, 'incomplete at-rule')
 
 
 def parse_ruleset(first_token, tokens):
@@ -275,6 +277,7 @@ def parse_ruleset(first_token, tokens):
             return RuleSet(selector, declarations), errors
         else:
             selector_parts.append(token)
+    raise ParseError(token, 'no declaration block found for ruleset')
 
 
 def parse_declaration_list(tokens):

@@ -55,7 +55,7 @@ foo(int x) {\
     ('Lorem\\\nIpsum',
         [('IDENT', 'Lorem'), ('DELIM', '\\'), ('S', '\n'), ('IDENT', 'Ipsum')]),
 
-    # Cancel the meaning of sepcial characters
+    # Cancel the meaning of special characters
     (r'"Lorem\"Ipsum"', [('STRING', 'Lorem"Ipsum')]),
     (r'Lorem\+Ipsum', [('IDENT', 'Lorem+Ipsum')]),
     (r'Lorem+Ipsum', [('IDENT', 'Lorem'), ('DELIM', '+'), ('IDENT', 'Ipsum')]),
