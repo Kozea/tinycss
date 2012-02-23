@@ -16,7 +16,7 @@ import functools
 import sys
 import re
 
-from .tokenizer import tokenize, COMPILED_MACROS
+from .tokenizer import tokenize_grouped, ContainerToken
 
 
 #  stylesheet  : [ CDO | CDC | S | statement ]*;
@@ -41,8 +41,7 @@ def parse(string):
     :param string: a CSS stylesheet as an unicode string
     :return: a :class:`Stylesheet`
     """
-    tokens = regroup(iter(tokenize(string)))
-    return parse_stylesheet(tokens)
+    return parse_stylesheet(tokenize_grouped(string))
 
 
 class Stylesheet(object):
@@ -163,50 +162,6 @@ class Declaration(object):
         return '\n'.join(lines)
 
 
-class ContainerToken(object):
-    """A token that contains other (nested) tokens."""
-    def __init__(self, type_, css_start, css_end, content, line, column):
-        self.type = type_
-        self.css_start = css_start
-        self.css_end = css_end
-        self.content = content
-        self.line = line
-        self.column = column
-
-    @property
-    def as_css(self):
-        parts = [self.css_start]
-        parts.extend(token.as_css for token in self.content)
-        parts.append(self.css_end)
-        return ''.join(parts)
-
-
-    format_string = '<ContainerToken {0.type} at {0.line}:{0.column}>'
-
-    def __repr__(self):
-        return (format_string + ' {0.content}').format(self)
-
-    def pretty(self):
-        """Return an indented string representation for debugging"""
-        lines = [self.format_string.format(self)]
-        for token in self.content:
-            for line in token.pretty().splitlines():
-                lines.append('    ' + line)
-        return '\n'.join(lines)
-
-
-class FunctionToken(ContainerToken):
-    """Specialized :class:`ContainerToken` that also hold a function name."""
-    def __init__(self, type_, css_start, css_end, function_name, content,
-                 line, column):
-        super(FunctionToken, self).__init__(
-            type_, css_start, css_end, content, line, column)
-        self.function_name = function_name
-
-    format_string = '<FunctionToken {0.function_name}() at {0.line}:{0.column}>'
-
-
-
 class ParseError(ValueError):
     """A recoverable parsing error."""
     def __init__(self, token, reason):
@@ -221,48 +176,12 @@ class ParseError(ValueError):
 class UnexpectedTokenError(ParseError):
     """A special kind of parsing error: a token of the wrong type was found."""
     def __init__(self, token, context):
-        super(UnexpectedToken, self).__init__(
-            token, 'unexpected {0} token in {1}'.format(token.type, context))
-
-
-def regroup(tokens, stop_at=None):
-    """
-    Match pairs of tokens: () [] {} function()
-    (Strings in "" or '' are taken care of by the tokenizer.)
-
-    Opening tokens are replaced by a :class:`ContainerToken`.
-    Closing tokens are removed. Unmatched closing tokens are invalid
-    but left as-is. All nested structures that are still open at
-    the end of the stylesheet are implicitly closed.
-
-    :param tokens:
-        a *flat* iterator of tokens, as returned by
-        :func:`~tinycss.tokenizer.tokenize`
-    :param stop_at:
-        only used for recursion
-    :return:
-        A tree of tokens.
-
-    """
-    pairs = {'FUNCTION': ')', '(': ')', '[': ']', '{': '}'}
-    for token in tokens:
-        type_ = token.type
-        if type_ == stop_at:
-            return
-
-        end = pairs.get(type_)
-        if end is None:
-            yield token  # Not a grouping token
+        if token.type in ('}', ')', ']'):
+            adjective = 'unmatched'
         else:
-            content = list(regroup(tokens, end))
-            if type_ == 'FUNCTION':
-                yield FunctionToken(token.type, token.as_css, end,
-                                    token.value, content,
-                                    token.line, token.column)
-            else:
-                yield ContainerToken(token.type, token.as_css, end,
-                                     content,
-                                     token.line, token.column)
+            adjective = 'unexpected'
+        message = '{0} {1} token in {2}'.format(adjective, token.type, context)
+        super(UnexpectedToken, self).__init__(token, message)
 
 
 def parse_stylesheet(tokens):
