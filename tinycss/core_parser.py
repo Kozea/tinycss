@@ -36,12 +36,12 @@ from .tokenizer import tokenize_grouped, ContainerToken
 #  unused      : block | ATKEYWORD S* | ';' S* | CDO S* | CDC S*;
 
 
-def parse(string):
+def parse(css_source):
     """
-    :param string: a CSS stylesheet as an unicode string
+    :param css_source: a CSS stylesheet as an unicode string
     :return: a :class:`Stylesheet`
     """
-    return parse_stylesheet(tokenize_grouped(string))
+    return parse_stylesheet(tokenize_grouped(css_source))
 
 
 class Stylesheet(object):
@@ -420,7 +420,7 @@ def validate_any(token, context):
             validate_any(token, type_)
     elif type_ not in ('S', 'IDENT', 'DIMENSION', 'PERCENTAGE', 'NUMBER',
                        'URI', 'DELIM', 'STRING', 'HASH', 'ATKEYWORD', ':',
-                       'UNICODE-RANGE', 'INCLUDES', 'DASHMATCH'):
+                       'UNICODE-RANGE'):
         raise UnexpectedToken(error_token, context)
 
 

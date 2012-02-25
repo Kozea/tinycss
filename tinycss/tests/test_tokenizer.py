@@ -10,7 +10,7 @@
 
 from __future__ import unicode_literals
 import pytest
-from tinycss.tokenizer import tokenize
+from tinycss.tokenizer import tokenize_flat
 
 
 @pytest.mark.parametrize(('input_css', 'expected_tokens'), [
@@ -33,11 +33,12 @@ foo(int x) {\
         (']', ']')]),
 
     #### Numbers are parsed
-    ('42 -4px 1.25em 30%',
+    ('42 -4pX 1.25em 30%',
         [('NUMBER', 42), ('S', ' '),
-         ('DIMENSION', (-4, 'px')), ('S', ' '),
-         ('DIMENSION', (1.25, 'em')), ('S', ' '),
-         ('PERCENTAGE', 30)]),
+         # units are normalized to lower-case:
+         ('DIMENSION', -4, 'px'), ('S', ' '),
+         ('DIMENSION', 1.25, 'em'), ('S', ' '),
+         ('PERCENTAGE', 30, '%')]),
 
     #### URLs are extracted
     ('url(foo.png)', [('URI', 'foo.png')]),
@@ -63,7 +64,8 @@ foo(int x) {\
 
     # Unicode
     (r'#\26 B', [('HASH', '#&B')]),
-    (r'12.5\000026B', [('DIMENSION', (12.5, '&B'))]),
+    (r'12.5\000026B', [('DIMENSION', 12.5, '&b')]),
+    (r'12.5\0000263B', [('DIMENSION', 12.5, '&3b')]),  # max 6 digits
     (r'"\26 B"', [('STRING', '&B')]),
     (r"'\000026B'", [('STRING', '&B')]),
     (r'url("\26 B")', [('URI', '&B')]),
@@ -72,15 +74,19 @@ foo(int x) {\
 
 ])
 def test_tokens(input_css, expected_tokens):
-    tokens = tokenize(input_css, ignore_comments=False)
-    result = [(token.type, token.value) for token in tokens]
+    tokens = tokenize_flat(input_css, ignore_comments=False)
+    result = [
+        (token.type, token.value) + (
+            () if token.unit is None else (token.unit,))
+        for token in tokens
+    ]
     assert result == expected_tokens
 
 
 def test_positions():
     """Test the reported line/column position of each token."""
     css = '/* Lorem\nipsum */\fa {\n    color: red;\tcontent: "dolor\\\fsit" }'
-    tokens = tokenize(css, ignore_comments=False)
+    tokens = tokenize_flat(css, ignore_comments=False)
     result = [(token.type, token.line, token.column) for token in tokens]
     assert result == [
         (u'COMMENT', 1, 1), (u'S', 2, 9),

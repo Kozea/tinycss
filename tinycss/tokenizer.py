@@ -64,21 +64,37 @@ MACROS = r'''
     baduri	{baduri1}|{baduri2}|{baduri3}
 '''.replace(r'\0', '\0').replace(r'\237', '\237')
 
+# Removed these tokens. Instead, they’re tokenized as two DELIM each.
+#    INCLUDES	~=
+#    DASHMATCH	|=
+# They are only used in selectors but selectors3 also have ^=, *= and $=.
+# We don’t actually parse selectors anyway
+
+# Re-ordered so that the longest match is always the first.
+# For example, "url('foo')" matches URI, BAD_URI, FUNCTION and IDENT,
+# but URI would always be a longer match than the others.
 TOKENS = r'''
+    S	[ \t\r\n\f]+
+
+    URI	url\({w}({string}|([!#$%&*-\[\]-~]|{nonascii}|{escape})*){w}\)
+    BAD_URI	{baduri}
+    FUNCTION	{ident}\(
+    UNICODE-RANGE	u\+[0-9a-f?]{{1,6}}(-[0-9a-f]{{1,6}})?
     IDENT	{ident}
+
     ATKEYWORD	@{ident}
+    HASH	#{name}
+
+    DIMENSION	({num})({ident})
+    PERCENTAGE	{num}%
+    NUMBER	{num}
+
     STRING	{string}
     BAD_STRING	{badstring}
-    BAD_URI	{baduri}
+
+    COMMENT	\/\*[^*]*\*+([^/*][^*]*\*+)*\/
     BAD_COMMENT	{badcomment}
-    HASH	#{name}
-    NUMBER	{num}
-    PERCENTAGE	{num}%
-    DIMENSION	({num})({ident})
-    URI	url\({w}({string}|([!#$%&*-\[\]-~]|{nonascii}|{escape})*){w}\)
-    UNICODE-RANGE	u\+[0-9a-f?]{{1,6}}(-[0-9a-f]{{1,6}})?
-    CDO	<!--
-    CDC	-->
+
     :	:
     ;	;
     {	\{{
@@ -87,15 +103,16 @@ TOKENS = r'''
     )	\)
     [	\[
     ]	\]
-    S	[ \t\r\n\f]+
-    COMMENT	\/\*[^*]*\*+([^/*][^*]*\*+)*\/
-    FUNCTION	{ident}\(
-    INCLUDES	~=
-    DASHMATCH	|=
+    CDO	<!--
+    CDC	-->
 '''
 
+
+# Strings with {macro} expanded
 COMPILED_MACROS = {}
-COMPILED_TOKENS = []  # ordered
+
+# match methods of re.RegexObject
+COMPILED_TOKEN_REGEXPS = []  # ordered
 
 
 def _init():
@@ -104,18 +121,24 @@ def _init():
     expand_macros = functools.partial(
         Formatter().vformat, args=(), kwargs=COMPILED_MACROS)
 
-    for line in MACROS.strip().splitlines():
-        name, value = line.split('\t')
-        COMPILED_MACROS[name.strip()] = '(?:%s)' % expand_macros(value)
+    for line in MACROS.splitlines():
+        if line.strip():
+            name, value = line.split('\t')
+            COMPILED_MACROS[name.strip()] = '(?:%s)' % expand_macros(value)
 
-    del COMPILED_TOKENS[:]
-    for line in TOKENS.strip().splitlines():
-        name, value = line.split('\t')
-        COMPILED_TOKENS.append((name.strip(), re.compile(
-            expand_macros(value),
-            # Case-insensitive when matching eg. uRL(foo)
-            # but preserve the case in extracted groups
-            re.I)))
+    del COMPILED_TOKEN_REGEXPS[:]
+    for line in TOKENS.splitlines():
+        if line.strip():
+            name, value = line.split('\t')
+            COMPILED_TOKEN_REGEXPS.append((
+                name.strip(),
+                re.compile(
+                    expand_macros(value),
+                    # Case-insensitive when matching eg. uRL(foo)
+                    # but preserve the case in extracted groups
+                    re.I
+                ).match
+            ))
 
 _init()
 
@@ -142,9 +165,9 @@ SIMPLE_UNESCAPE = functools.partial(
 FIND_NEWLINES = re.compile(COMPILED_MACROS['nl']).finditer
 
 
-def tokenize_flat(string, ignore_comments=True):
+def tokenize_flat(css_source, ignore_comments=True):
     """
-    :param string:
+    :param css_source:
         CSS as an unicode string
     :param ignore_comments:
         if true (the default) comments will not be included in the
@@ -154,7 +177,7 @@ def tokenize_flat(string, ignore_comments=True):
 
     """
     # Make these local variable to avoid global lookups in the loop
-    compiled_tokens = COMPILED_TOKENS
+    compiled_token = COMPILED_TOKEN_REGEXPS
     unicode_unescape = UNICODE_UNESCAPE
     newline_unescape = NEWLINE_UNESCAPE
     simple_unescape = SIMPLE_UNESCAPE
@@ -163,72 +186,66 @@ def tokenize_flat(string, ignore_comments=True):
     pos = 0
     line = 1
     column = 1
-    len_string = len(string)
-    while pos < len_string:
-        # Find the longest match
-        length = 0
-        type_ = None
-        for this_type, regexp in compiled_tokens:
-            this_match = regexp.match(string, pos)
-            if this_match is not None:
-                this_value = this_match.group()
-                this_length = len(this_value)
-                if this_length > length:
-                    match = this_match
-                    type_ = this_type
-                    css_value = this_value
-                    length = this_length
-        if not (ignore_comments and type_ == 'COMMENT'):
-            if type_ is None:  # No match
-                # "Any other character not matched by the above rules,
-                #  and neither a single nor a double quote."
-                # ... but quotes at the start of a token are always matched
-                # by STRING or BADSTRING. So DELIM is any single character.
-                type_ = 'DELIM'
-                css_value = value = string[pos]
-                length = 1
-            else:
-                # Parse numbers, extract strings and URIs, unescape
-                unit = None
-                if type_ in ('DIMENSION', 'PERCENTAGE', 'NUMBER'):
-                    if type_ == 'PERCENTAGE':
-                        value = css_value[:-1]
-                        unit = '%'
-                    elif type_ == 'DIMENSION':
-                        value = match.group(1)
-                        unit = match.group(2)
-                        unit = unicode_unescape(unit)
-                        unit = simple_unescape(unit)
-                        unit = unit.lower()
-                    else: # NUMBER
-                        value = css_value
-                    if '.' in value:
-                        value = float(value)
-                    else:
-                        value = int(value)
-                elif type_ in ('IDENT', 'ATKEYWORD', 'HASH', 'FUNCTION'):
-                    value = unicode_unescape(css_value)
-                    value = simple_unescape(value)
-                elif type_ == 'URI':
-                    value = match.group(1)
-                    if value and value[0] in '"\'':
-                        value = value[1:-1]  # Remove quotes
-                        value = newline_unescape(value)
-                    value = unicode_unescape(value)
-                    value = simple_unescape(value)
-                elif type_ == 'STRING':
-                    value = css_value[1:-1]  # Remove quotes
+    source_len = len(css_source)
+    while pos < source_len:
+        for type_, regexp in compiled_token:
+            match = regexp(css_source, pos)
+            if match is not None:
+                # First match is the longest. See comments on TOKENS above.
+                css_value = match.group()
+                break
+        else:
+            # No match.
+            # "Any other character not matched by the above rules,
+            #  and neither a single nor a double quote."
+            # ... but quotes at the start of a token are always matched
+            # by STRING or BADSTRING. So DELIM is any single character.
+            type_ = 'DELIM'
+            css_value = css_source[pos]
+
+        # A BAD_COMMENT is a comment at EOF. Ignore it too.
+        if not (ignore_comments and type_ in ('COMMENT', 'BAD_COMMENT')):
+            # Parse numbers, extract strings and URIs, unescape
+            unit = None
+            if type_ == 'DIMENSION':
+                value = match.group(1)
+                value = float(value) if '.' in value else int(value)
+                unit = match.group(2)
+                unit = unicode_unescape(unit)
+                unit = simple_unescape(unit)
+                unit = unit.lower()  # normalize
+            elif type_ == 'PERCENTAGE':
+                value = css_value[:-1]
+                value = float(value) if '.' in value else int(value)
+                unit = '%'
+            elif type_ == 'NUMBER':
+                value = css_value
+                value = float(value) if '.' in value else int(value)
+            elif type_ in ('IDENT', 'ATKEYWORD', 'HASH', 'FUNCTION'):
+                value = unicode_unescape(css_value)
+                value = simple_unescape(value)
+            elif type_ == 'URI':
+                value = match.group(1)
+                if value and value[0] in '"\'':
+                    value = value[1:-1]  # Remove quotes
                     value = newline_unescape(value)
-                    value = unicode_unescape(value)
-                    value = simple_unescape(value)
-                else:
-                    value = css_value
+                value = unicode_unescape(value)
+                value = simple_unescape(value)
+            elif type_ == 'STRING':
+                value = css_value[1:-1]  # Remove quotes
+                value = newline_unescape(value)
+                value = unicode_unescape(value)
+                value = simple_unescape(value)
+            else:
+                value = css_value
             yield Token(type_, css_value, value, unit, line, column)
+
+        length = len(css_value)
         pos += length
         newlines = list(find_newlines(css_value))
         if newlines:
             line += len(newlines)
-            # Have line start at column 1
+            # Add 1 to have lines start at column 1, not 0
             column = length - newlines[-1].end() + 1
         else:
             column += length
@@ -277,9 +294,9 @@ def regroup(tokens, stop_at=None):
                                      token.line, token.column)
 
 
-def tokenize_grouped(string, ignore_comments=True):
+def tokenize_grouped(css_source, ignore_comments=True):
     """
-    :param string:
+    :param css_source:
         CSS as an unicode string
     :param ignore_comments:
         if true (the default) comments will not be included in the
@@ -288,7 +305,7 @@ def tokenize_grouped(string, ignore_comments=True):
         An iterator of :class:`Token`
 
     """
-    return regroup(tokenize_flat(string, ignore_comments))
+    return regroup(tokenize_flat(css_source, ignore_comments))
 
 
 class Token(object):
