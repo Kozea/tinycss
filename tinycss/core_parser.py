@@ -60,7 +60,7 @@ class Stylesheet(object):
         self.rules = rules
         self.errors = errors
 
-    def pretty(self):
+    def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
         lines = [rule.pretty() for rule in self.rules] + [
                  e.message for e in self.errors]
@@ -96,7 +96,7 @@ class AtRule(object):
         self.head = head
         self.body = body
 
-    def pretty(self):
+    def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
         lines = [self.at_keyword]
         for token in self.head:
@@ -127,7 +127,7 @@ class RuleSet(object):
         self.selector = selector
         self.declarations = declarations
 
-    def pretty(self):
+    def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
         lines = [self.selector.pretty(), '{']
         for declaration in self.declarations:
@@ -153,7 +153,7 @@ class Declaration(object):
         self.name = name
         self.values = values
 
-    def pretty(self):
+    def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
         lines = [self.name + ':']
         for token in self.values:
@@ -169,7 +169,7 @@ class ParseError(ValueError):
         self.message = 'Parse error at {0}:{1}, {2}'.format(
             token.line, token.column, reason)
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<{0}: {1}>'.format(type(self).__name__, self.message)
 
 
@@ -195,6 +195,7 @@ def parse_stylesheet(tokens):
     """
     rules = []
     errors = []
+    tokens = iter(token)
     for token in tokens:
         if token.type not in ('S', 'CDO', 'CDC'):
             try:

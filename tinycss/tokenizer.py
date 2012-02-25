@@ -266,7 +266,7 @@ def tokenize_flat(css_source, ignore_comments=True):
             column += length
 
 
-def regroup(tokens, stop_at=None):
+def regroup(tokens):
     """
     Match pairs of tokens: () [] {} function()
     (Strings in "" or '' are taken care of by the tokenizer.)
@@ -277,36 +277,42 @@ def regroup(tokens, stop_at=None):
     the end of the stylesheet are implicitly closed.
 
     :param tokens:
-        a *flat* iterator of tokens, as returned by :func:`tokenize_flat`.
-        Needs to be an iterator that can be consumed little by little,
-        not any iterable.
-    :param stop_at:
-        only used for recursion
+        a *flat* iterable of tokens, as returned by :func:`tokenize_flat`.
     :return:
         A tree of tokens.
 
     """
+    # "global" objects for the inner recursion
     pairs = {'FUNCTION': ')', '(': ')', '[': ']', '{': '}'}
-    for token in tokens:
-        assert not hasattr(token, 'content'), (
-            'Token looks already grouped: {0}'.format(token))
-        type_ = token.type
-        if type_ == stop_at:
-            return
+    tokens = iter(tokens)
+    eof = [False]
 
-        end = pairs.get(type_)
-        if end is None:
-            yield token  # Not a grouping token
-        else:
-            content = list(regroup(tokens, end))
-            if type_ == 'FUNCTION':
-                yield FunctionToken(token.type, token.as_css, end,
-                                    token.value, content,
-                                    token.line, token.column)
+    def _regroup_inner(stop_at=None, tokens=tokens, pairs=pairs, eof=eof):
+        for token in tokens:
+            assert not hasattr(token, 'content'), (
+                'Token looks already grouped: {0}'.format(token))
+            type_ = token.type
+            if type_ == stop_at:
+                return
+
+            end = pairs.get(type_)
+            if end is None:
+                yield token  # Not a grouping token
             else:
-                yield ContainerToken(token.type, token.as_css, end,
-                                     content,
-                                     token.line, token.column)
+                content = list(_regroup_inner(end))
+                if eof[0]:
+                    end = ''  # Implicit end of structure at EOF.
+                if type_ == 'FUNCTION':
+                    yield FunctionToken(token.type, token.as_css, end,
+                                        token.value, content,
+                                        token.line, token.column)
+                else:
+                    yield ContainerToken(token.type, token.as_css, end,
+                                         content,
+                                         token.line, token.column)
+        else:
+            eof[0] = True  # end of file/stylesheet
+    return _regroup_inner()
 
 
 def tokenize_grouped(css_source, ignore_comments=True):
@@ -325,6 +331,10 @@ def tokenize_grouped(css_source, ignore_comments=True):
 
 class Token(object):
     """A single atomic token.
+
+    .. attribute:: is_container
+        Always ``False``.
+        Helps to tell :class:`Token` apart from :class:`ContainerToken`.
 
     .. attribute:: type
         The type of token as a string. eg. 'IDENT'
@@ -358,6 +368,8 @@ class Token(object):
         The column number inside a line of this token in the CSS source
 
     """
+    is_container = False
+
     def __init__(self, type_, css_value, value, unit, line, column):
         self.type = type_
         self.as_css = css_value
@@ -366,7 +378,7 @@ class Token(object):
         self.line = line
         self.column = column
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return ('<Token {0.type} at {0.line}:{0.column} {0.value!r}{1}>'
                 .format(self, self.unit or ''))
 
@@ -376,6 +388,10 @@ class Token(object):
 
 class ContainerToken(object):
     """A token that contains other (nested) tokens.
+
+    .. attribute:: is_container
+        Always ``True``.
+        Helps to tell :class:`ContainerToken` apart from :class:`Token`.
 
     .. attribute:: type
         The type of token as a string. eg. 'IDENT'
@@ -396,6 +412,8 @@ class ContainerToken(object):
         The column number inside a line of the opening token in the CSS source
 
     """
+    is_container = True
+
     def __init__(self, type_, css_start, css_end, content, line, column):
         self.type = type_
         self.css_start = css_start
@@ -417,10 +435,10 @@ class ContainerToken(object):
 
     format_string = '<ContainerToken {0.type} at {0.line}:{0.column}>'
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return (format_string + ' {0.content}').format(self)
 
-    def pretty(self):
+    def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
         lines = [self.format_string.format(self)]
         for token in self.content:
