@@ -172,20 +172,45 @@ def test_positions():
     ]),
 ])
 def test_token_grouping(css_source, expected_tokens):
-    def serialize(tokens):
-        for token in tokens:
-            if token.type == 'FUNCTION':
-                yield (token.type, token.function_name,
-                       list(serialize(token.content)))
-            elif token.is_container:
-                yield token.type, list(serialize(token.content))
-            else:
-                yield token.type, token.value
-
     tokens = tokenize_grouped(css_source, ignore_comments=False)
-    result = list(serialize(tokens))
-    import pprint
-    pprint.pprint(result, width=40)
+    result = list(serialize_groups(tokens))
+    assert result == expected_tokens
+
+
+def serialize_groups(tokens):
+    for token in tokens:
+        if token.type == 'FUNCTION':
+            yield (token.type, token.function_name,
+                   list(serialize_groups(token.content)))
+        elif token.is_container:
+            yield token.type, list(serialize_groups(token.content))
+        else:
+            yield token.type, token.value
+
+
+@pytest.mark.parametrize(('ignore_comments', 'expected_tokens'), [
+    (False, [
+        ('COMMENT', '/* lorem */'),
+        ('S', ' '),
+        ('IDENT', 'ipsum'),
+        ('[', [
+            ('IDENT', 'dolor'),
+            ('COMMENT', '/* sit */'),
+        ]),
+        ('BAD_COMMENT', '/* amet')
+    ]),
+    (True, [
+        ('S', ' '),
+        ('IDENT', 'ipsum'),
+        ('[', [
+            ('IDENT', 'dolor'),
+        ]),
+    ]),
+])
+def test_comments(ignore_comments, expected_tokens):
+    css_source = '/* lorem */ ipsum[dolor/* sit */]/* amet'
+    tokens = tokenize_grouped(css_source, ignore_comments)
+    result = list(serialize_groups(tokens))
     assert result == expected_tokens
 
 
