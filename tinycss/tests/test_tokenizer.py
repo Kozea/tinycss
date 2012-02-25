@@ -72,6 +72,19 @@ foo(int x) {\
     (r'url(\26 B)', [('URI', '&B')]),
     (r'Lorem\110000Ipsum', [('IDENT', 'Lorem\uFFFDIpsum')]),
 
+    #### Bad strings
+
+    # String ends at EOF without closing: no error, parsed
+    ('"Lorem\\26Ipsum', [('STRING', 'Lorem&Ipsum')]),
+    # Unescaped newline: ends the string, error, unparsed
+    ('"Lorem\\26Ipsum\n', [
+        ('BAD_STRING', r'"Lorem\26Ipsum'), ('S', '\n')]),
+    # Tokenization restarts after the newline, so the second " starts
+    # a new string (which ends at EOF without errors, as above.)
+    ('"Lorem\\26Ipsum\ndolor" sit', [
+        ('BAD_STRING', r'"Lorem\26Ipsum'), ('S', '\n'),
+        ('IDENT', 'dolor'), ('STRING', ' sit')]),
+
 ])
 def test_tokens(input_css, expected_tokens):
     tokens = tokenize_flat(input_css, ignore_comments=False)

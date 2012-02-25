@@ -199,9 +199,11 @@ def tokenize_flat(css_source, ignore_comments=True):
             # "Any other character not matched by the above rules,
             #  and neither a single nor a double quote."
             # ... but quotes at the start of a token are always matched
-            # by STRING or BADSTRING. So DELIM is any single character.
+            # by STRING or BAD_STRING. So DELIM is any single character.
             type_ = 'DELIM'
             css_value = css_source[pos]
+        length = len(css_value)
+        next_pos = pos + length
 
         # A BAD_COMMENT is a comment at EOF. Ignore it too.
         if not (ignore_comments and type_ in ('COMMENT', 'BAD_COMMENT')):
@@ -236,12 +238,25 @@ def tokenize_flat(css_source, ignore_comments=True):
                 value = newline_unescape(value)
                 value = unicode_unescape(value)
                 value = simple_unescape(value)
+            # BAD_STRING can only be one of:
+            # * Unclosed string at the end of the stylesheet:
+            #   Close the string, but this is not an error.
+            #   Make it a "good" STRING token.
+            # * Unclosed string at the (unescaped) end of the line:
+            #   Close the string, but this is an error.
+            #   Leave it as a BAD_STRING, don’t bother parsing it.
+            # See http://www.w3.org/TR/CSS21/syndata.html#parsing-errors
+            elif type_ == 'BAD_STRING' and next_pos == source_len:
+                type_ = 'STRING'
+                value = css_value[1:]  # Remove quote
+                value = newline_unescape(value)
+                value = unicode_unescape(value)
+                value = simple_unescape(value)
             else:
                 value = css_value
             yield Token(type_, css_value, value, unit, line, column)
 
-        length = len(css_value)
-        pos += length
+        pos = next_pos
         newlines = list(find_newlines(css_value))
         if newlines:
             line += len(newlines)
