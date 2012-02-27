@@ -10,6 +10,7 @@
 
 from __future__ import unicode_literals
 import pytest
+
 from tinycss.tokenizer import tokenize_flat, tokenize_grouped
 
 
@@ -65,10 +66,10 @@ foo(int x) {\
     (r'url(foo\).png)', [('URI', 'foo).png')]),
 
     # Unicode
-    (r'\26 B', [('IDENT', '&B')]),
-    (r'@\26 B', [('ATKEYWORD', '@&B')]),
-    (r'#\26 B', [('HASH', '#&B')]),
-    (r'\26 B(', [('FUNCTION', '&B(')]),
+    ('\\26 B', [('IDENT', '&B')]),
+    ('@\\26\tB', [('ATKEYWORD', '@&B')]),
+    ('#\\26\nB', [('HASH', '#&B')]),
+    ('\\26\r\nB(', [('FUNCTION', '&B(')]),
     (r'12.5\000026B', [('DIMENSION', 12.5, '&b')]),
     (r'12.5\0000263B', [('DIMENSION', 12.5, '&3b')]),  # max 6 digits
     (r'"\26 B"', [('STRING', '&B')]),
@@ -173,17 +174,18 @@ def test_positions():
 ])
 def test_token_grouping(css_source, expected_tokens):
     tokens = tokenize_grouped(css_source, ignore_comments=False)
-    result = list(serialize_groups(tokens))
+    result = list(jsonify(tokens))
     assert result == expected_tokens
 
 
-def serialize_groups(tokens):
+def jsonify(tokens):
+    """Turn tokens into "JSON-compatible" data structures."""
     for token in tokens:
         if token.type == 'FUNCTION':
             yield (token.type, token.function_name,
-                   list(serialize_groups(token.content)))
+                   list(jsonify(token.content)))
         elif token.is_container:
-            yield token.type, list(serialize_groups(token.content))
+            yield token.type, list(jsonify(token.content))
         else:
             yield token.type, token.value
 
@@ -210,7 +212,7 @@ def serialize_groups(tokens):
 def test_comments(ignore_comments, expected_tokens):
     css_source = '/* lorem */ ipsum[dolor/* sit */]/* amet'
     tokens = tokenize_grouped(css_source, ignore_comments)
-    result = list(serialize_groups(tokens))
+    result = list(jsonify(tokens))
     assert result == expected_tokens
 
 

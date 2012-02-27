@@ -10,7 +10,7 @@
     :license: BSD, see LICENSE for more details.
 """
 
-from __future__ import unicode_literals, print_function
+from __future__ import unicode_literals
 from itertools import chain
 import functools
 import sys
@@ -60,6 +60,10 @@ class Stylesheet(object):
         self.rules = rules
         self.errors = errors
 
+    def __repr__(self):  # pragma: no cover
+        return '<{0.__class__.__name__} {1} rules {2} errors>'.format(
+            self, len(self.rules), len(self.errors))
+
     def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
         lines = [rule.pretty() for rule in self.rules] + [
@@ -91,10 +95,16 @@ class AtRule(object):
     You are expected to parse and validate these at-rules yourself.
 
     """
-    def __init__(self, at_keyword, head, body):
+    def __init__(self, at_keyword, head, body, line, column):
         self.at_keyword = at_keyword
         self.head = head
         self.body = body
+        self.line = line
+        self.column  = column
+
+    def __repr__(self):  # pragma: no cover
+        return ('<{0.__class__.__name__} {0.line}:{0.column} {0.at_keyword}>'
+                .format(self))
 
     def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
@@ -123,9 +133,15 @@ class RuleSet(object):
         :func:`parse_declaration_list`, in source order.
 
     """
-    def __init__(self, selector, declarations):
+    def __init__(self, selector, declarations, line, column):
         self.selector = selector
         self.declarations = declarations
+        self.line = line
+        self.column  = column
+
+    def __repr__(self):  # pragma: no cover
+        return ('<{0.__class__.__name__} at {0.line}:{0.column}'
+                ' {0.selector.as_css}>'.format(self))
 
     def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
@@ -149,14 +165,20 @@ class Declaration(object):
         The property value: a list of tokens as returned by :func:`parse_value`.
 
     """
-    def __init__(self, name, values):
+    def __init__(self, name, value, line, column):
         self.name = name
-        self.values = values
+        self.value = value
+        self.line = line
+        self.column  = column
+
+    def __repr__(self):  # pragma: no cover
+        return ('<{0.__class__.__name__} {0.line}:{0.column}'
+                ' {0.name}: {0.value.as_css}>'.format(self))
 
     def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
         lines = [self.name + ':']
-        for token in self.values:
+        for token in self.value.content:
             for line in token.pretty().splitlines():
                 lines.append('    ' + line)
         return '\n'.join(lines)
@@ -166,22 +188,13 @@ class ParseError(ValueError):
     """A recoverable parsing error."""
     def __init__(self, token, reason):
         self.token = token
-        self.message = 'Parse error at {0}:{1}, {2}'.format(
-            token.line, token.column, reason)
+        self.reason = reason
+        self.msg = self.message = (
+            'Parse error at {0.token.line}:{0.token.column}, {0.reason}'
+            .format(self))
 
     def __repr__(self):  # pragma: no cover
-        return '<{0}: {1}>'.format(type(self).__name__, self.message)
-
-
-class UnexpectedTokenError(ParseError):
-    """A special kind of parsing error: a token of the wrong type was found."""
-    def __init__(self, token, context):
-        if token.type in ('}', ')', ']'):
-            adjective = 'unmatched'
-        else:
-            adjective = 'unexpected'
-        message = '{0} {1} token in {2}'.format(adjective, token.type, context)
-        super(UnexpectedToken, self).__init__(token, message)
+        return ('<{0.__class__.__name__}: {0.message}>'.format(self))
 
 
 def parse_stylesheet(tokens):
@@ -195,7 +208,7 @@ def parse_stylesheet(tokens):
     """
     rules = []
     errors = []
-    tokens = iter(token)
+    tokens = iter(tokens)
     for token in tokens:
         if token.type not in ('S', 'CDO', 'CDC'):
             try:
@@ -234,12 +247,13 @@ def parse_at_rule(at_keyword_token, tokens):
     for token in tokens:
         if token.type in '{;':
             for head_token in head:
-                validate_any(head_token.value, 'at-rule head')
+                validate_any(head_token, 'at-rule head')
             if token.type == '{':
                 body = token
             else:
                 body = None
-            return AtRule(at_keyword, head, body)
+            return AtRule(at_keyword, head, body,
+                          at_keyword_token.line, at_keyword_token.column)
         # Ignore white space just after the at-keyword, but keep it afterwards
         elif head or token.type != 'S':
             head.append(token)
@@ -275,7 +289,9 @@ def parse_ruleset(first_token, tokens):
             selector = ContainerToken(
                 'SELECTOR', '', '', selector_parts, start.line, start.column)
             declarations, errors = parse_declaration_list(token.content)
-            return RuleSet(selector, declarations), errors
+            ruleset = RuleSet(selector, declarations,
+                              first_token.line, first_token.column)
+            return ruleset, errors
         else:
             selector_parts.append(token)
     raise ParseError(token, 'no declaration block found for ruleset')
@@ -301,8 +317,9 @@ def parse_declaration_list(tokens):
     this_part = []
     for token in tokens:
         type_ = token.type
-        if type_ == ';' and this_part:
-            parts.append(this_part)
+        if type_ == ';':
+            if this_part:
+                parts.append(this_part)
             this_part = []
         # skip white space at the start
         elif this_part or type_ != 'S':
@@ -338,25 +355,28 @@ def parse_declaration(tokens):
     """
     tokens = iter(tokens)
 
-    token = next(tokens)  # assume there is at least one
-    if token.type == 'IDENT':
+    name_token = next(tokens)  # assume there is at least one
+    if name_token.type == 'IDENT':
         # CSS syntax is case-insensitive
-        property_name = token.value.lower()
+        property_name = name_token.value.lower()
     else:
-        raise UnexpectedToken(token, ', expected a property name')
+        raise ParseError(name_token,
+            'expected a property name, got {0}'.format(name_token.type))
 
     for token in tokens:
         if token.type == ':':
             break
         elif token.type != 'S':
-            raise UnexpectedToken(token, ", expected ':'")
+            raise ParseError(token, "expected ':', got {0}".format(token.type))
     else:
         raise ParseError(token, "expected ':'")
 
     value = parse_value(tokens)
     if not value:
         raise ParseError(token, 'expected a property value')
-    return Declaration(property_name, value)
+    value = ContainerToken(
+        'VALUES', '', '', value, value[0].line, value[0].column)
+    return Declaration(property_name, value, name_token.line, name_token.column)
 
 
 def parse_value(tokens):
@@ -378,7 +398,7 @@ def parse_value(tokens):
         # Skip white space at the start
         if content or type_ != 'S':
             if type_ == '{':
-                validate_block(token, 'property value')
+                validate_block(token.content, 'property value')
             else:
                 validate_any(token, 'property value')
             content.append(token)
@@ -401,7 +421,7 @@ def validate_block(tokens, context):
     for token in tokens:
         type_ = token.type
         if type_ == '{':
-            validate_block(token.value, context)
+            validate_block(token.content, context)
         elif type_ not in (';', 'ATKEYWORD'):
             validate_any(token, context)
 
@@ -420,14 +440,10 @@ def validate_any(token, context):
         for token in token.content:
             validate_any(token, type_)
     elif type_ not in ('S', 'IDENT', 'DIMENSION', 'PERCENTAGE', 'NUMBER',
-                       'URI', 'DELIM', 'STRING', 'HASH', 'ATKEYWORD', ':',
-                       'UNICODE-RANGE'):
-        raise UnexpectedToken(error_token, context)
-
-
-if __name__ == '__main__':
-    # XXX debug
-    import sys, pprint
-    with open(sys.argv[1], 'rb') as fd:
-        content = fd.read().decode('utf8')
-    print(parse(content).pretty())
+                       'URI', 'DELIM', 'STRING', 'HASH', ':', 'UNICODE-RANGE'):
+        if type_ in ('}', ')', ']'):
+            adjective = 'unmatched'
+        else:
+            adjective = 'unexpected'
+        raise ParseError(token,
+            '{0} {1} token in {2}'.format(adjective, type_, context))

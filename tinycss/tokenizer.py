@@ -436,7 +436,7 @@ class ContainerToken(object):
     format_string = '<ContainerToken {0.type} at {0.line}:{0.column}>'
 
     def __repr__(self):  # pragma: no cover
-        return (format_string + ' {0.content}').format(self)
+        return (self.format_string + ' {0.content}').format(self)
 
     def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
