@@ -165,7 +165,160 @@ SIMPLE_UNESCAPE = functools.partial(
 FIND_NEWLINES = re.compile(COMPILED_MACROS['nl']).finditer
 
 
-def tokenize_flat(css_source, ignore_comments=True):
+class Token(object):
+    """A single atomic token.
+
+    .. attribute:: is_container
+        Always ``False``.
+        Helps to tell :class:`Token` apart from :class:`ContainerToken`.
+
+    .. attribute:: type
+        The type of token as a string. eg. 'IDENT'
+
+    .. attribute:: as_css
+        The string as it was read from the CSS source
+
+    .. attribute:: value
+        The parsed value:
+
+        * All backslash-escapes are unescaped.
+        * NUMBER, PERCENTAGE or DIMENSION tokens: the numeric value
+          as an int or float.
+        * STRING tokens: the unescaped string without quotes
+        * URI tokens: the unescaped URI without quotes or
+          ``url(`` and ``)`` markers.
+        * IDENT, ATKEYWORD, HASH or FUNCTION tokens: the unescaped token,
+          with ``@``, ``#`` or ``(`` markers left as-is
+        * Other tokens: same as :attr:`as_css`
+
+    .. attribute:: unit
+        * DIMENSION tokens: the normalized (unescaped, lower-case)
+          unit name as a string. eg. 'px'
+        * PERCENTAGE tokens: the string '%'
+        * Other tokens: ``None``
+
+    .. attribute:: line
+        The line number of this token in the CSS source
+
+    .. attribute:: column
+        The column number inside a line of this token in the CSS source
+
+    """
+    is_container = False
+    __slots__ = 'type', 'as_css', 'value', 'unit', 'line', 'column'
+
+    def __init__(self, type_, css_value, value, unit, line, column):
+        self.type = type_
+        self.as_css = css_value
+        self.value = value
+        self.unit = unit
+        self.line = line
+        self.column = column
+
+    def __repr__(self):  # pragma: no cover
+        return ('<Token {0.type} at {0.line}:{0.column} {0.value!r}{1}>'
+                .format(self, self.unit or ''))
+
+    # For debugging:
+    pretty = __repr__
+
+
+class ContainerToken(object):
+    """A token that contains other (nested) tokens.
+
+    .. attribute:: is_container
+        Always ``True``.
+        Helps to tell :class:`ContainerToken` apart from :class:`Token`.
+
+    .. attribute:: type
+        The type of token as a string. eg. 'IDENT'
+
+    .. attribute:: css_start
+        The string for the opening token as it was read from the CSS source
+
+    .. attribute:: css_end
+        The string for the closing token as it was read from the CSS source
+
+    .. attribute:: content
+        A list of :class:`Token` or nested :class:`ContainerToken`
+
+    .. attribute:: line
+        The line number of the opening token in the CSS source
+
+    .. attribute:: column
+        The column number inside a line of the opening token in the CSS source
+
+    """
+    is_container = True
+    __slots__ = 'type', 'css_start', 'css_end', 'content', 'line', 'column'
+
+    def __init__(self, type_, css_start, css_end, content, line, column):
+        self.type = type_
+        self.css_start = css_start
+        self.css_end = css_end
+        self.content = content
+        self.line = line
+        self.column = column
+
+    @property
+    def as_css(self):
+        """The (recursive) CSS representation of the token,
+        as parsed in the source.
+        """
+        parts = [self.css_start]
+        parts.extend(token.as_css for token in self.content)
+        parts.append(self.css_end)
+        return ''.join(parts)
+
+
+    format_string = '<ContainerToken {0.type} at {0.line}:{0.column}>'
+
+    def __repr__(self):  # pragma: no cover
+        return (self.format_string + ' {0.content}').format(self)
+
+    def pretty(self):  # pragma: no cover
+        """Return an indented string representation for debugging"""
+        lines = [self.format_string.format(self)]
+        for token in self.content:
+            for line in token.pretty().splitlines():
+                lines.append('    ' + line)
+        return '\n'.join(lines)
+
+
+class FunctionToken(ContainerToken):
+    """A :class:`ContainerToken` for a FUNCTION group.
+    Has an additional attribute:
+
+    .. attribute:: function_name
+        The unescaped name of the function, with the ``(`` marker removed.
+
+    """
+    __slots__ = 'function_name',
+
+    def __init__(self, type_, css_start, css_end, function_name, content,
+                 line, column):
+        super(FunctionToken, self).__init__(
+            type_, css_start, css_end, content, line, column)
+        # Remove the ( marker:
+        self.function_name = function_name[:-1]
+
+    format_string = '<FunctionToken {0.function_name}() at {0.line}:{0.column}>'
+
+
+def tokenize_flat(css_source, ignore_comments=True,
+    # Make these local variable to avoid global lookups in the loop
+    compiled_token=COMPILED_TOKEN_REGEXPS,
+    unicode_unescape=UNICODE_UNESCAPE,
+    newline_unescape=NEWLINE_UNESCAPE,
+    simple_unescape=SIMPLE_UNESCAPE,
+    find_newlines=FIND_NEWLINES,
+    Token=Token,
+    len=len,
+    int=int,
+    float=float,
+    list=list,
+    _None=None,
+):
     """
     :param css_source:
         CSS as an unicode string
@@ -176,21 +329,16 @@ def tokenize_flat(css_source, ignore_comments=True):
         An iterator of :class:`Token`
 
     """
-    # Make these local variable to avoid global lookups in the loop
-    compiled_token = COMPILED_TOKEN_REGEXPS
-    unicode_unescape = UNICODE_UNESCAPE
-    newline_unescape = NEWLINE_UNESCAPE
-    simple_unescape = SIMPLE_UNESCAPE
-    find_newlines = FIND_NEWLINES
 
     pos = 0
     line = 1
     column = 1
     source_len = len(css_source)
+    tokens = []
     while pos < source_len:
         for type_, regexp in compiled_token:
             match = regexp(css_source, pos)
-            if match is not None:
+            if match:
                 # First match is the longest. See comments on TOKENS above.
                 css_value = match.group()
                 break
@@ -208,7 +356,7 @@ def tokenize_flat(css_source, ignore_comments=True):
         # A BAD_COMMENT is a comment at EOF. Ignore it too.
         if not (ignore_comments and type_ in ('COMMENT', 'BAD_COMMENT')):
             # Parse numbers, extract strings and URIs, unescape
-            unit = None
+            unit = _None
             if type_ == 'DIMENSION':
                 value = match.group(1)
                 value = float(value) if '.' in value else int(value)
@@ -254,7 +402,7 @@ def tokenize_flat(css_source, ignore_comments=True):
                 value = simple_unescape(value)
             else:
                 value = css_value
-            yield Token(type_, css_value, value, unit, line, column)
+            tokens.append(Token(type_, css_value, value, unit, line, column))
 
         pos = next_pos
         newlines = list(find_newlines(css_value))
@@ -264,6 +412,7 @@ def tokenize_flat(css_source, ignore_comments=True):
             column = length - newlines[-1].end() + 1
         else:
             column += length
+    return tokens
 
 
 def regroup(tokens):
@@ -289,8 +438,6 @@ def regroup(tokens):
 
     def _regroup_inner(stop_at=None, tokens=tokens, pairs=pairs, eof=eof):
         for token in tokens:
-            assert not hasattr(token, 'content'), (
-                'Token looks already grouped: {0}'.format(token))
             type_ = token.type
             if type_ == stop_at:
                 return
@@ -299,6 +446,8 @@ def regroup(tokens):
             if end is None:
                 yield token  # Not a grouping token
             else:
+                assert not isinstance(token, ContainerToken), (
+                    'Token looks already grouped: {0}'.format(token))
                 content = list(_regroup_inner(end))
                 if eof[0]:
                     end = ''  # Implicit end of structure at EOF.
@@ -327,139 +476,3 @@ def tokenize_grouped(css_source, ignore_comments=True):
 
     """
     return regroup(tokenize_flat(css_source, ignore_comments))
-
-
-class Token(object):
-    """A single atomic token.
-
-    .. attribute:: is_container
-        Always ``False``.
-        Helps to tell :class:`Token` apart from :class:`ContainerToken`.
-
-    .. attribute:: type
-        The type of token as a string. eg. 'IDENT'
-
-    .. attribute:: as_css
-        The string as it was read from the CSS source
-
-    .. attribute:: value
-        The parsed value:
-
-        * All backslash-escapes are unescaped.
-        * NUMBER, PERCENTAGE or DIMENSION tokens: the numeric value
-          as an int or float.
-        * STRING tokens: the unescaped string without quotes
-        * URI tokens: the unescaped URI without quotes or
-          ``url(`` and ``)`` markers.
-        * IDENT, ATKEYWORD, HASH or FUNCTION tokens: the unescaped token,
-          with ``@``, ``#`` or ``(`` markers left as-is
-        * Other tokens: same as :attr:`as_css`
-
-    .. attribute:: unit
-        * DIMENSION tokens: the normalized (unescaped, lower-case)
-          unit name as a string. eg. 'px'
-        * PERCENTAGE tokens: the string '%'
-        * Other tokens: ``None``
-
-    .. attribute:: line
-        The line number of this token in the CSS source
-
-    .. attribute:: column
-        The column number inside a line of this token in the CSS source
-
-    """
-    is_container = False
-
-    def __init__(self, type_, css_value, value, unit, line, column):
-        self.type = type_
-        self.as_css = css_value
-        self.value = value
-        self.unit = unit
-        self.line = line
-        self.column = column
-
-    def __repr__(self):  # pragma: no cover
-        return ('<Token {0.type} at {0.line}:{0.column} {0.value!r}{1}>'
-                .format(self, self.unit or ''))
-
-    # For debugging:
-    pretty = __repr__
-
-
-class ContainerToken(object):
-    """A token that contains other (nested) tokens.
-
-    .. attribute:: is_container
-        Always ``True``.
-        Helps to tell :class:`ContainerToken` apart from :class:`Token`.
-
-    .. attribute:: type
-        The type of token as a string. eg. 'IDENT'
-
-    .. attribute:: css_start
-        The string for the opening token as it was read from the CSS source
-
-    .. attribute:: css_end
-        The string for the closing token as it was read from the CSS source
-
-    .. attribute:: content
-        A list of :class:`Token` or nested :class:`ContainerToken`
-
-    .. attribute:: line
-        The line number of the opening token in the CSS source
-
-    .. attribute:: column
-        The column number inside a line of the opening token in the CSS source
-
-    """
-    is_container = True
-
-    def __init__(self, type_, css_start, css_end, content, line, column):
-        self.type = type_
-        self.css_start = css_start
-        self.css_end = css_end
-        self.content = content
-        self.line = line
-        self.column = column
-
-    @property
-    def as_css(self):
-        """The (recursive) CSS representation of the token,
-        as parsed in the source.
-        """
-        parts = [self.css_start]
-        parts.extend(token.as_css for token in self.content)
-        parts.append(self.css_end)
-        return ''.join(parts)
-
-
-    format_string = '<ContainerToken {0.type} at {0.line}:{0.column}>'
-
-    def __repr__(self):  # pragma: no cover
-        return (self.format_string + ' {0.content}').format(self)
-
-    def pretty(self):  # pragma: no cover
-        """Return an indented string representation for debugging"""
-        lines = [self.format_string.format(self)]
-        for token in self.content:
-            for line in token.pretty().splitlines():
-                lines.append('    ' + line)
-        return '\n'.join(lines)
-
-
-class FunctionToken(ContainerToken):
-    """A :class:`ContainerToken` for a FUNCTION group.
-    Has an additional attribute:
-
-    .. attribute:: function_name
-        The unescaped name of the function, with the ``(`` marker removed.
-
-    """
-    def __init__(self, type_, css_start, css_end, function_name, content,
-                 line, column):
-        super(FunctionToken, self).__init__(
-            type_, css_start, css_end, content, line, column)
-        # Remove the ( marker:
-        self.function_name = function_name[:-1]
-
-    format_string = '<FunctionToken {0.function_name}() at {0.line}:{0.column}>'
