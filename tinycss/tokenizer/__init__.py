@@ -111,9 +111,9 @@ TOKENS = r'''
 # Strings with {macro} expanded
 COMPILED_MACROS = {}
 
-# match methods of re.RegexObject
-COMPILED_TOKEN_REGEXPS = []  # ordered
 
+COMPILED_TOKEN_REGEXPS = []  # [(name, regexp.match)]  ordered
+COMPILED_TOKEN_INDEXES = {}  # {name: i}  helper for the C speedups
 
 def _init():
     """Import-time initialization."""
@@ -139,6 +139,10 @@ def _init():
                     re.I
                 ).match
             ))
+
+    COMPILED_TOKEN_INDEXES.clear()
+    for i, (name, regexp) in enumerate(COMPILED_TOKEN_REGEXPS):
+        COMPILED_TOKEN_INDEXES[name] = i
 
 _init()
 
@@ -307,7 +311,7 @@ class FunctionToken(ContainerToken):
 
 def tokenize_flat(css_source, ignore_comments=True,
     # Make these local variable to avoid global lookups in the loop
-    compiled_token=COMPILED_TOKEN_REGEXPS,
+    compiled_tokens=COMPILED_TOKEN_REGEXPS,
     unicode_unescape=UNICODE_UNESCAPE,
     newline_unescape=NEWLINE_UNESCAPE,
     simple_unescape=SIMPLE_UNESCAPE,
@@ -336,7 +340,7 @@ def tokenize_flat(css_source, ignore_comments=True,
     source_len = len(css_source)
     tokens = []
     while pos < source_len:
-        for type_, regexp in compiled_token:
+        for type_, regexp in compiled_tokens:
             match = regexp(css_source, pos)
             if match:
                 # First match is the longest. See comments on TOKENS above.
