@@ -13,15 +13,15 @@ from __future__ import unicode_literals
 
 from . import (
     COMPILED_TOKEN_REGEXPS, UNICODE_UNESCAPE, NEWLINE_UNESCAPE,
-    SIMPLE_UNESCAPE, FIND_NEWLINES)
+    SIMPLE_UNESCAPE, FIND_NEWLINES, Token)
 
 
 COMPILED_TOKEN_INDEXES = dict(
     (name, i) for i, (name, regexp) in enumerate(COMPILED_TOKEN_REGEXPS))
 
 
-cdef class Token:
-    """Cython version of Token."""
+cdef class CToken:
+    __doc__ = Token.__doc__
     is_container = False
 
     cdef public object type, as_css, value, unit
@@ -42,8 +42,18 @@ cdef class Token:
     # For debugging:
     pretty = __repr__
 
+
 def tokenize_flat(css_source, int ignore_comments=1):
-    """Cython version of tokenize_flat."""
+    """
+    :param css_source:
+        CSS as an unicode string
+    :param ignore_comments:
+        if true (the default) comments will not be included in the
+        return value
+    :return:
+        An iterator of :class:`Token`
+
+    """
     # Make these local variable to avoid global lookups in the loop
     compiled_token_indexes = COMPILED_TOKEN_INDEXES
     compiled_tokens = COMPILED_TOKEN_REGEXPS
@@ -73,7 +83,7 @@ def tokenize_flat(css_source, int ignore_comments=1):
     cdef Py_ssize_t source_len = len(css_source)
     cdef Py_ssize_t n_tokens = len(compiled_tokens)
     cdef Py_ssize_t length, next_pos, type_
-    cdef Token token
+    cdef CToken token
 
     tokens = []
     while pos < source_len:
@@ -145,7 +155,7 @@ def tokenize_flat(css_source, int ignore_comments=1):
                 value = simple_unescape(value)
             else:
                 value = css_value
-            token = Token(type_name, css_value, value, unit, line, column)
+            token = CToken(type_name, css_value, value, unit, line, column)
             tokens.append(token)
 
         pos = next_pos
