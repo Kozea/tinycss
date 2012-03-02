@@ -3,7 +3,7 @@
     tinycss.tokenizer
     -----------------
 
-    Tokenizer for the CSS core syntax:
+    Tokenizer for the CSS core syntax:
     http://www.w3.org/TR/CSS21/syndata.html#tokenization
 
     :copyright: (c) 2010 by Simon Sapin.
@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 
 import re
 import sys
+import operator
 import functools
 from string import Formatter
 
@@ -147,9 +148,16 @@ def _init():
 _init()
 
 
-def _unicode_replace(match):
+try:
+    unichr
+except NameError:
+    # Python 3
+    unichr = chr
+    unicode = str
+
+def _unicode_replace(match, int=int, unichr=unichr, maxunicode=sys.maxunicode):
     codepoint = int(match.group(1), 16)
-    if codepoint <= sys.maxunicode:
+    if codepoint <= maxunicode:
         return unichr(codepoint)
     else:
         return '\N{REPLACEMENT CHARACTER}'  # U+FFFD
@@ -159,12 +167,13 @@ UNICODE_UNESCAPE = functools.partial(
     _unicode_replace)
 
 NEWLINE_UNESCAPE = functools.partial(
-    re.compile(r'\\' + COMPILED_MACROS['nl']).sub,
+    re.compile(r'()\\' + COMPILED_MACROS['nl']).sub,
     '')
 
 SIMPLE_UNESCAPE = functools.partial(
     re.compile(r'\\(.)').sub,
-    r'\1')
+    # Same as r'\1', but faster on CPython
+    operator.methodcaller('group', 1))
 
 FIND_NEWLINES = re.compile(COMPILED_MACROS['nl']).finditer
 
@@ -480,3 +489,16 @@ def tokenize_grouped(css_source, ignore_comments=True):
 
     """
     return regroup(tokenize_flat(css_source, ignore_comments))
+
+
+# Optional Cython version of the inner loop.
+# Make both versions available with explicit names for tests.
+python_tokenize_flat = tokenize_flat
+try:
+    from . import _speedups
+except ImportError:
+    cython_tokenize_flat = None
+else:
+    cython_tokenize_flat = _speedups.tokenize_flat
+    # Default to the Cython version if available
+    tokenize_flat = cython_tokenize_flat

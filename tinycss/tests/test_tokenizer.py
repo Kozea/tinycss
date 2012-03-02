@@ -11,7 +11,8 @@
 from __future__ import unicode_literals
 import pytest
 
-from tinycss.tokenizer import tokenize_flat, tokenize_grouped
+from tinycss.tokenizer import (
+    python_tokenize_flat, cython_tokenize_flat, regroup)
 
 
 @pytest.mark.parametrize(('css_source', 'expected_tokens'), [
@@ -93,27 +94,29 @@ foo(int x) {\
 
 ])
 def test_tokens(css_source, expected_tokens):
-    tokens = tokenize_flat(css_source, ignore_comments=False)
-    result = [
-        (token.type, token.value) + (
-            () if token.unit is None else (token.unit,))
-        for token in tokens
-    ]
-    assert result == expected_tokens
+    for tokenize in (python_tokenize_flat, cython_tokenize_flat):
+        tokens = tokenize(css_source, ignore_comments=False)
+        result = [
+            (token.type, token.value) + (
+                () if token.unit is None else (token.unit,))
+            for token in tokens
+        ]
+        assert result == expected_tokens
 
 
 def test_positions():
     """Test the reported line/column position of each token."""
     css = '/* Lorem\nipsum */\fa {\n    color: red;\tcontent: "dolor\\\fsit" }'
-    tokens = tokenize_flat(css, ignore_comments=False)
-    result = [(token.type, token.line, token.column) for token in tokens]
-    assert result == [
-        (u'COMMENT', 1, 1), (u'S', 2, 9),
-        (u'IDENT', 3, 1), (u'S', 3, 2), (u'{', 3, 3),
-        (u'S', 3, 4), (u'IDENT', 4, 5), (u':', 4, 10),
-        (u'S', 4, 11), (u'IDENT', 4, 12), (u';', 4, 15), (u'S', 4, 16),
-        (u'IDENT', 4, 17), (u':', 4, 24), (u'S', 4, 25), (u'STRING', 4, 26),
-        (u'S', 5, 5), (u'}', 5, 6)]
+    for tokenize in (python_tokenize_flat, cython_tokenize_flat):
+        tokens = tokenize(css, ignore_comments=False)
+        result = [(token.type, token.line, token.column) for token in tokens]
+        assert result == [
+            ('COMMENT', 1, 1), ('S', 2, 9),
+            ('IDENT', 3, 1), ('S', 3, 2), ('{', 3, 3),
+            ('S', 3, 4), ('IDENT', 4, 5), (':', 4, 10),
+            ('S', 4, 11), ('IDENT', 4, 12), (';', 4, 15), ('S', 4, 16),
+            ('IDENT', 4, 17), (':', 4, 24), ('S', 4, 25), ('STRING', 4, 26),
+            ('S', 5, 5), ('}', 5, 6)]
 
 
 @pytest.mark.parametrize(('css_source', 'expected_tokens'), [
@@ -173,9 +176,10 @@ def test_positions():
     ]),
 ])
 def test_token_grouping(css_source, expected_tokens):
-    tokens = tokenize_grouped(css_source, ignore_comments=False)
-    result = list(jsonify(tokens))
-    assert result == expected_tokens
+    for tokenize in (python_tokenize_flat, cython_tokenize_flat):
+        tokens = regroup(tokenize(css_source, ignore_comments=False))
+        result = list(jsonify(tokens))
+        assert result == expected_tokens
 
 
 def jsonify(tokens):
@@ -211,9 +215,10 @@ def jsonify(tokens):
 ])
 def test_comments(ignore_comments, expected_tokens):
     css_source = '/* lorem */ ipsum[dolor/* sit */]/* amet'
-    tokens = tokenize_grouped(css_source, ignore_comments)
-    result = list(jsonify(tokens))
-    assert result == expected_tokens
+    for tokenize in (python_tokenize_flat, cython_tokenize_flat):
+        tokens = regroup(tokenize(css_source, ignore_comments))
+        result = list(jsonify(tokens))
+        assert result == expected_tokens
 
 
 @pytest.mark.parametrize('css_source', [
@@ -229,7 +234,8 @@ foo(int x) {\
     'a[b{"d',
 ])
 def test_token_serialize_css(css_source):
-    for tokenize in [tokenize_flat, tokenize_grouped]:
-        tokens = tokenize(css_source, ignore_comments=False)
-        result = ''.join(token.as_css for token in tokens)
-        assert result == css_source
+    for tokenize in (python_tokenize_flat, cython_tokenize_flat):
+        for _regroup in [regroup, lambda x: x]:
+            tokens = _regroup(tokenize(css_source, ignore_comments=False))
+            result = ''.join(token.as_css for token in tokens)
+            assert result == css_source
