@@ -1,7 +1,7 @@
 # coding: utf8
 """
-    Test suite for tinycss
-    ----------------------
+    Tests for the core parser
+    -------------------------
 
     :copyright: (c) 2010 by Simon Sapin.
     :license: BSD, see LICENSE for more details.
@@ -11,7 +11,7 @@
 from __future__ import unicode_literals
 import pytest
 
-from tinycss.core_parser import CoreParser
+from tinycss.core import CoreParser
 
 from .test_tokenizer import jsonify
 

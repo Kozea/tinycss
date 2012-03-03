@@ -209,7 +209,7 @@ class CoreParser(object):
             A :class:`Stylesheet`.
 
         """
-        return self.parse_stylesheet_tokens(tokenize_grouped(css_source))
+        return Stylesheet(*self.parse_rules(tokenize_grouped(css_source)))
 
 
     def parse_style_attr(self, css_source):
@@ -225,13 +225,13 @@ class CoreParser(object):
 
     # API for subclasses:
 
-    def parse_stylesheet_tokens(self, tokens):
-        """Parse a stylesheet.
+    def parse_rules(self, tokens):
+        """Parse a stylesheet, ie. a sequence of rulesets and at-rules.
 
         :param tokens:
             An iterable of tokens.
         :return:
-            A :class:`Stylesheet`.
+            A tuple of a list of rules and a list of :class:`ParseError`.
 
         """
         parse_at_rule_methods = []
@@ -263,7 +263,7 @@ class CoreParser(object):
                 except ParseError as e:
                     errors.append(e)
                     # Skip the entire rule
-        return Stylesheet(rules, errors)
+        return rules, errors
 
 
     def parse_at_rule(self, rule, stylesheet_rules, errors):
@@ -276,6 +276,9 @@ class CoreParser(object):
         the at-rule (appended something to ``stylesheet_rules`` or to
         ``errors``). The parser stops there for this at-rule. Otherwise,
         it continues with the next class in the MRO.
+
+        A method can also raise a :class:`ParseError`. The error is added
+        to the list, and the rule is considered handled.
 
         At-rules that are not handled at all are ignored with an
         "Unknown at-rule" error.
@@ -301,10 +304,10 @@ class CoreParser(object):
             if (rule.line, rule.column) == (1, 1):
                 if not (len(rule.head) == 1 and rule.head[0].type == 'STRING'
                         and rule.head[0].as_css[0] == '"' and not rule.body):
-                    errors.append(ParseError(rule, 'invalid @charset rule'))
+                    raise ParseError(rule, 'invalid @charset rule')
             else:
-                errors.append(ParseError(rule,
-                    '@charset rule not at the beginning of the stylesheet'))
+                raise ParseError(rule,
+                    '@charset rule not at the beginning of the stylesheet')
             return True
         return False
 
