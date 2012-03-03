@@ -336,6 +336,10 @@ class CoreParser(object):
         token = at_keyword_token
         for token in tokens:
             if token.type in '{;':
+                # Remove white space at the end of the head
+                # (but not in the middle).
+                while head and head[-1].type == 'S':
+                    head.pop()
                 for head_token in head:
                     self.validate_any(head_token, 'at-rule head')
                 if token.type == '{':
@@ -344,8 +348,7 @@ class CoreParser(object):
                     body = None
                 return AtRule(at_keyword, head, body,
                               at_keyword_token.line, at_keyword_token.column)
-            # Ignore white space just after the at-keyword,
-            # but keep it afterwards
+            # Ignore white space just after the at-keyword.
             elif head or token.type != 'S':
                 head.append(token)
         raise ParseError(token, 'incomplete at-rule')
