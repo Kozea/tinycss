@@ -179,12 +179,13 @@ class Declaration(object):
 
 class ParseError(ValueError):
     """A recoverable parsing error."""
-    def __init__(self, token, reason):
-        self.token = token
+    def __init__(self, subject, reason):
+        self.subject = subject
         self.reason = reason
         self.msg = self.message = (
-            'Parse error at {0.token.line}:{0.token.column}, {0.reason}'
+            'Parse error at {0.subject.line}:{0.subject.column}, {0.reason}'
             .format(self))
+        super(ParseError, self).__init__(self.message)
 
     def __repr__(self):  # pragma: no cover
         return ('<{0.__class__.__name__}: {0.message}>'.format(self))
@@ -233,6 +234,11 @@ class CoreParser(object):
             A :class:`Stylesheet`.
 
         """
+        parse_at_rule_methods = []
+        for class_ in type(self).mro():
+            method = vars(class_).get('parse_at_rule')
+            if method:
+                parse_at_rule_methods.append(method)
         rules = []
         errors = []
         tokens = iter(tokens)
@@ -240,7 +246,16 @@ class CoreParser(object):
             if token.type not in ('S', 'CDO', 'CDC'):
                 try:
                     if token.type == 'ATKEYWORD':
-                        rules.append(self.parse_at_rule(token, tokens))
+                        rule = self.read_at_rule(token, tokens)
+                        for parse_at_rule in parse_at_rule_methods:
+                            # These are unbound methods: they need
+                            # to be passed self explicitly.
+                            handled = parse_at_rule(self, rule, rules, errors)
+                            if handled:
+                                break
+                        else:
+                            errors.append(ParseError(
+                                rule, 'unknown at-rule: ' + rule.at_keyword))
                     else:
                         rule, rule_errors = self.parse_ruleset(token, tokens)
                         rules.append(rule)
@@ -251,18 +266,47 @@ class CoreParser(object):
         return Stylesheet(rules, errors)
 
 
-    def parse_at_rule(self, at_keyword_token, tokens):
+    def parse_at_rule(self, at_rule, stylesheet_rules, errors):
         """Parse an at-rule.
+
+        The parser will call this methods on each of the classes in its MRO
+        (in order) so these methods never need to use ``super()``.
+
+        If any method returns ``True``, it indicates that it has handled
+        the at-rule (appended something to ``stylesheet_rules`` or to
+        ``errors``). The parser stops there for this at-rule. Otherwise,
+        it continues with the next class in the MRO.
+
+        At-rules that are not handled at all are ignored with an
+        "Unknown at-rule" error.
+
+        :param at_rule:
+            An unparsed :class:`AtRule`.
+        :param stylesheet_rules:
+            The list of at-rules and rulesets that have been parsed so far
+            in this stylesheet. This method can append to this list
+            (to add a valid, parsed at-rule) or inspect it to decide if
+            the rule is valid. (For example, @import rules are only allowed
+            before anything but a @charset rule.)
+        :return:
+            Whether the at-rule was handled. (bool)
+
+        """
+        return False
+
+
+    def read_at_rule(self, at_keyword_token, tokens):
+        """Read an at-rule.
 
         :param at_keyword_token:
             The ATKEYWORD token that starts this at-rule
             You may have read it already to distinguish the rule
             from a ruleset.
         :param tokens:
-            an iterator of subsequent tokens. Will be consumed just enough
+            An iterator of subsequent tokens. Will be consumed just enough
             for one at-rule.
         :return:
-            an :class:`AtRule`
+            An unparsed :class:`AtRule`
         :raises:
             :class:`ParseError` if the head is invalid for the core grammar.
             The body is **not** validated. See :class:`AtRule`.

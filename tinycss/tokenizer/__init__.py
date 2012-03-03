@@ -150,7 +150,7 @@ _init()
 
 try:
     unichr
-except NameError:
+except NameError:  # pragma: no cover
     # Python 3
     unichr = chr
     unicode = str
@@ -496,7 +496,7 @@ def tokenize_grouped(css_source, ignore_comments=True):
 python_tokenize_flat = tokenize_flat
 try:
     from . import _speedups
-except ImportError:
+except ImportError:  # pragma: no cover
     cython_tokenize_flat = None
 else:
     cython_tokenize_flat = _speedups.tokenize_flat

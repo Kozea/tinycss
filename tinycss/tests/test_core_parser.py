@@ -16,6 +16,29 @@ from tinycss.core_parser import CoreParser
 from .test_tokenizer import jsonify
 
 
+
+class TestParser(CoreParser):
+    """A parser that always accepts unparsed at-rules."""
+    def parse_at_rule(self, at_rule, stylesheet_rules, errors):
+        stylesheet_rules.append(at_rule)
+        return True
+
+
+@pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [
+    (' /* hey */\n', 0, []),
+    ('foo {}', 1, []),
+    ('foo{} @page{} bar{}', 2, ['unknown at-rule: @page']),
+])
+def test_at_rules(css_source, expected_rules, expected_errors):
+    # Not using TestParser here:
+    stylesheet = CoreParser().parse_stylesheet(css_source)
+    assert len(stylesheet.errors) == len(expected_errors)
+    for error, expected in zip(stylesheet.errors, expected_errors):
+        assert expected in error.message
+    result = len(stylesheet.rules)
+    assert result == expected_rules
+
+
 @pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [
     (' /* hey */\n', [], []),
 
@@ -69,7 +92,7 @@ from .test_tokenizer import jsonify
         ['unmatched ] token in (']),
 ])
 def test_parse_stylesheet(css_source, expected_rules, expected_errors):
-    stylesheet = CoreParser().parse_stylesheet(css_source)
+    stylesheet = TestParser().parse_stylesheet(css_source)
     assert len(stylesheet.errors) == len(expected_errors)
     for error, expected in zip(stylesheet.errors, expected_errors):
         assert expected in error.message
@@ -119,7 +142,7 @@ def test_parse_stylesheet(css_source, expected_rules, expected_errors):
         ['unmatched ] token in (']),
 ])
 def test_parse_style_attr(css_source, expected_declarations, expected_errors):
-    declarations, errors = CoreParser().parse_style_attr(css_source)
+    declarations, errors = TestParser().parse_style_attr(css_source)
     assert len(errors) == len(expected_errors)
     for error, expected in zip(errors, expected_errors):
         assert expected in error.message

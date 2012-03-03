@@ -97,7 +97,7 @@ foo(int x) {\
 
 ]])
 def test_tokens(tokenize, css_source, expected_tokens):
-    if tokenize is None:
+    if tokenize is None:  # pragma: no cover
         pytest.skip('Speedups not available')
     tokens = tokenize(css_source, ignore_comments=False)
     result = [
@@ -111,7 +111,7 @@ def test_tokens(tokenize, css_source, expected_tokens):
     python_tokenize_flat, cython_tokenize_flat])
 def test_positions(tokenize):
     """Test the reported line/column position of each token."""
-    if tokenize is None:
+    if tokenize is None:  # pragma: no cover
         pytest.skip('Speedups not available')
     css = '/* Lorem\nipsum */\fa {\n    color: red;\tcontent: "dolor\\\fsit" }'
     tokens = tokenize(css, ignore_comments=False)
@@ -185,7 +185,7 @@ def test_positions(tokenize):
     ]),
 ]])
 def test_token_grouping(tokenize, css_source, expected_tokens):
-    if tokenize is None:
+    if tokenize is None:  # pragma: no cover
         pytest.skip('Speedups not available')
     tokens = regroup(tokenize(css_source, ignore_comments=False))
     result = list(jsonify(tokens))
@@ -227,7 +227,7 @@ def jsonify(tokens):
     ]),
 ]])
 def test_comments(tokenize, ignore_comments, expected_tokens):
-    if tokenize is None:
+    if tokenize is None:  # pragma: no cover
         pytest.skip('Speedups not available')
     css_source = '/* lorem */ ipsum[dolor/* sit */]/* amet'
     tokens = regroup(tokenize(css_source, ignore_comments))
@@ -251,7 +251,7 @@ foo(int x) {\
     'a[b{"d',
 ]])
 def test_token_serialize_css(tokenize, css_source):
-    if tokenize is None:
+    if tokenize is None:  # pragma: no cover
         pytest.skip('Speedups not available')
     for _regroup in [regroup, lambda x: x]:
         tokens = _regroup(tokenize(css_source, ignore_comments=False))
