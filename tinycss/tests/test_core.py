@@ -20,8 +20,7 @@ from .test_tokenizer import jsonify
 class TestParser(CoreParser):
     """A parser that always accepts unparsed at-rules."""
     def parse_at_rule(self, rule, stylesheet_rules, errors):
-        stylesheet_rules.append(rule)
-        return True
+        return rule
 
 
 @pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [

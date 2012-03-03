@@ -69,11 +69,10 @@ class CSS21Parser(CoreParser):
         if rule.at_keyword == '@page':
             selector = self.parse_page_selector(rule.head)
             if not rule.body:
-                raise ParseError((rule.head[-1] if selector else rule),
+                raise ParseError(rule.head[-1] if selector else rule,
                     'invalid @page rule: missing block')
             declarations, at_rules = self.parse_page_block(rule.body, errors)
-            stylesheet_rules.append(PageRule(selector, declarations, at_rules))
-            return True
+            return PageRule(selector, declarations, at_rules)
 
 
     def parse_page_selector(self, head):

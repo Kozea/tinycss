@@ -209,7 +209,7 @@ class CoreParser(object):
             A :class:`Stylesheet`.
 
         """
-        return Stylesheet(*self.parse_rules(tokenize_grouped(css_source)))
+        return Stylesheet(*self.parse_statements(tokenize_grouped(css_source)))
 
 
     def parse_style_attr(self, css_source):
@@ -225,13 +225,13 @@ class CoreParser(object):
 
     # API for subclasses:
 
-    def parse_rules(self, tokens):
-        """Parse a stylesheet, ie. a sequence of rulesets and at-rules.
+    def parse_statements(self, tokens):
+        """Parse a sequence of statements (rulesets and at-rules).
 
         :param tokens:
             An iterable of tokens.
         :return:
-            A tuple of a list of rules and a list of :class:`ParseError`.
+            A tuple of a list of statements and a list of :class:`ParseError`.
 
         """
         parse_at_rule_methods = []
@@ -250,8 +250,10 @@ class CoreParser(object):
                         for parse_at_rule in parse_at_rule_methods:
                             # These are unbound methods: they need
                             # to be passed self explicitly.
-                            handled = parse_at_rule(self, rule, rules, errors)
-                            if handled:
+                            result = parse_at_rule(self, rule, rules, errors)
+                            if result is not None:
+                                if result:
+                                    rules.append(result)
                                 break
                         else:
                             errors.append(ParseError(
@@ -272,13 +274,17 @@ class CoreParser(object):
         The parser will call this methods on each of the classes in its MRO
         (in order) so these methods never need to use ``super()``.
 
-        If any method returns ``True``, it indicates that it has handled
-        the at-rule (appended something to ``stylesheet_rules`` or to
-        ``errors``). The parser stops there for this at-rule. Otherwise,
-        it continues with the next class in the MRO.
+        Each method can:
 
-        A method can also raise a :class:`ParseError`. The error is added
-        to the list, and the rule is considered handled.
+        * Return ``None``: the at-rule was not handled, go to the
+          next method in the MRO.
+        * Return another "false" value: the at-rule was handled, but nothing
+          is to be added to the rule list. The rule is ignored.
+        * Return anything else: the rule was handled and the return value
+          is assumed to be a parsed at-rule; it is added to the rule list.
+        * Raise a :class:`ParseError`. The at-rule was handled but is
+          invalid. The rule is ignored and the error is added to the
+          error list.
 
         At-rules that are not handled at all are ignored with an
         "Unknown at-rule" error.
@@ -308,8 +314,9 @@ class CoreParser(object):
             else:
                 raise ParseError(rule,
                     '@charset rule not at the beginning of the stylesheet')
-            return True
-        return False
+            # The rule is valid, but ignored.
+            # (It should not appear in stylesheet.rules)
+            return False
 
 
     def read_at_rule(self, at_keyword_token, tokens):
