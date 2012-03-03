@@ -40,7 +40,7 @@ class Stylesheet(object):
     """
     A parsed CSS stylesheet.
 
-    .. attribute:: rules
+    .. attribute:: statements
         a mixed list of :class:`AtRule` and :class:`RuleSets` as returned by
         :func:`parse_at_rule` and :func:`parse_ruleset`, in source order
 
@@ -48,17 +48,17 @@ class Stylesheet(object):
         a list of :class:`ParseError`
 
     """
-    def __init__(self, rules, errors):
-        self.rules = rules
+    def __init__(self, statements, errors):
+        self.statements = statements
         self.errors = errors
 
     def __repr__(self):  # pragma: no cover
         return '<{0.__class__.__name__} {1} rules {2} errors>'.format(
-            self, len(self.rules), len(self.errors))
+            self, len(self.statements), len(self.errors))
 
     def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
-        lines = [rule.pretty() for rule in self.rules] + [
+        lines = [rule.pretty() for rule in self.statements] + [
                  e.message for e in self.errors]
         return '\n'.join(lines)
 
@@ -209,7 +209,11 @@ class CoreParser(object):
             A :class:`Stylesheet`.
 
         """
-        return Stylesheet(*self.parse_statements(tokenize_grouped(css_source)))
+        tokens = tokenize_grouped(css_source)
+        errors = []
+        statements = self.parse_statements(
+            tokens, errors, context='stylesheet')
+        return Stylesheet(statements, errors)
 
 
     def parse_style_attr(self, css_source):
@@ -225,13 +229,18 @@ class CoreParser(object):
 
     # API for subclasses:
 
-    def parse_statements(self, tokens):
+    def parse_statements(self, tokens, errors, context):
         """Parse a sequence of statements (rulesets and at-rules).
 
         :param tokens:
             An iterable of tokens.
+        :param errors:
+            A list where to append encountered :class:`ParseError`
+        :param context:
+            Either 'stylesheet' or an at-keyword such as '@media'.
+            (Some at-rules are only allowed in some contexts.)
         :return:
-            A tuple of a list of statements and a list of :class:`ParseError`.
+            A list of parsed statements.
 
         """
         parse_at_rule_methods = []
@@ -240,7 +249,6 @@ class CoreParser(object):
             if method:
                 parse_at_rule_methods.append(method)
         rules = []
-        errors = []
         tokens = iter(tokens)
         for token in tokens:
             if token.type not in ('S', 'CDO', 'CDC'):
@@ -250,7 +258,8 @@ class CoreParser(object):
                         for parse_at_rule in parse_at_rule_methods:
                             # These are unbound methods: they need
                             # to be passed self explicitly.
-                            result = parse_at_rule(self, rule, rules, errors)
+                            result = parse_at_rule(
+                                self, rule, rules, errors, context)
                             if result is not None:
                                 if result:
                                     rules.append(result)
@@ -265,10 +274,10 @@ class CoreParser(object):
                 except ParseError as e:
                     errors.append(e)
                     # Skip the entire rule
-        return rules, errors
+        return rules
 
 
-    def parse_at_rule(self, rule, stylesheet_rules, errors):
+    def parse_at_rule(self, rule, previous_rules, errors, context):
         """Parse an at-rule.
 
         The parser will call this methods on each of the classes in its MRO
@@ -294,12 +303,15 @@ class CoreParser(object):
 
         :param rule:
             An unparsed :class:`AtRule`.
-        :param stylesheet_rules:
+        :param previous_rules:
             The list of at-rules and rulesets that have been parsed so far
-            in this stylesheet. This method can append to this list
+            in this context. This method can append to this list
             (to add a valid, parsed at-rule) or inspect it to decide if
             the rule is valid. (For example, @import rules are only allowed
             before anything but a @charset rule.)
+        :param context:
+            Either 'stylesheet' or an at-keyword such as '@media'.
+            (Some at-rules are only allowed in some contexts.)
         :return:
             Whether the at-rule was handled. (bool)
 
@@ -307,6 +319,7 @@ class CoreParser(object):
         if rule.at_keyword == '@charset':
             # (1, 1) assumes that the byte order mark (BOM), if any,
             # was removed when decoding bytes to Unicode.
+            # This also implies context == 'stylesheet':
             if (rule.line, rule.column) == (1, 1):
                 if not (len(rule.head) == 1 and rule.head[0].type == 'STRING'
                         and rule.head[0].as_css[0] == '"' and not rule.body):

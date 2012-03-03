@@ -16,7 +16,6 @@ from tinycss.css21 import CSS21Parser
 from .test_tokenizer import jsonify
 
 
-
 @pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [
     (' /* hey */\n', [], []),
     ('@page {}', [(None, [])], []),
@@ -31,6 +30,9 @@ from .test_tokenizer import jsonify
     ('@page { a:1; ; b: 2 }',
         [(None, [('a', [('NUMBER', 1)]), ('b', [('NUMBER', 2)])])],
         []),
+    ('@page { a:1; c: ; b: 2 }',
+        [(None, [('a', [('NUMBER', 1)]), ('b', [('NUMBER', 2)])])],
+        ['expected a property value']),
     ('@page { a:1; @top-left {} b: 2 }',
         [(None, [('a', [('NUMBER', 1)]), ('b', [('NUMBER', 2)])])],
         ['unknown at-rule in @page context: @top-left']),
@@ -44,14 +46,51 @@ def test_at_page(css_source, expected_rules, expected_errors):
     for error, expected in zip(stylesheet.errors, expected_errors):
         assert expected in error.message
 
-    for rule in stylesheet.rules:
+    for rule in stylesheet.statements:
         assert rule.at_keyword == '@page'
         assert rule.at_rules == []  # in CSS 2.1
     result = [
         (rule.selector, [
             (decl.name, list(jsonify(decl.value.content)))
             for decl in rule.declarations])
-        for rule in stylesheet.rules
+        for rule in stylesheet.statements
+    ]
+    assert result == expected_rules
+
+
+@pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [
+    (' /* hey */\n', [], []),
+    ('@media all {}', [(['all'], [])], []),
+    ('@media screen, print {}', [(['screen', 'print'], [])], []),
+    ('@media all;', [], ['invalid @media rule: missing block']),
+    ('@media  {}', [], ['expected media types for @media']),
+    ('@media 4 {}', [], ['expected a media type, got NUMBER']),
+    ('@media , screen {}', [], ['expected a media type, got DELIM']),
+    ('@media screen, {}', [], ['expected a media type']),
+    ('@media screen print {}', [], ['expected a comma, got S']),
+
+    ('@media all { @page { a: 1 } @media; foo { a: 1 } }',
+        [(['all'], [('foo ', [('a', [('NUMBER', 1)])])])],
+        ['@page rule not allowed in @media',
+         '@media rule not allowed in @media']),
+
+])
+def test_at_media(css_source, expected_rules, expected_errors):
+    stylesheet = CSS21Parser().parse_stylesheet(css_source)
+    assert len(stylesheet.errors) == len(expected_errors)
+    for error, expected in zip(stylesheet.errors, expected_errors):
+        assert expected in error.message
+
+    for rule in stylesheet.statements:
+        assert rule.at_keyword == '@media'
+    result = [
+        (rule.media, [
+            (sub_rule.selector.as_css, [
+                (decl.name, list(jsonify(decl.value.content)))
+                for decl in sub_rule.declarations])
+            for sub_rule in rule.statements
+        ])
+        for rule in stylesheet.statements
     ]
     assert result == expected_rules
 

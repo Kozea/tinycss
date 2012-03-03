@@ -55,6 +55,27 @@ class PageRule(object):
         self.at_rules = at_rules
 
 
+class MediaRule(object):
+    """A parsed @media rule.
+
+    .. attribute:: at_keyword
+        Always ``'@media'``
+
+    .. attribute:: media
+        For CSS 2.1 without media queries: the media types
+        as a list of strings.
+
+    .. attribute:: statements
+        The list rulesets and at-rules inside the @media block.
+
+    """
+    at_keyword = '@media'
+
+    def __init__(self, media, statements):
+        self.media = media
+        self.statements = statements
+
+
 class CSS21Parser(CoreParser):
     """Parser for CSS 2.1
 
@@ -65,14 +86,76 @@ class CSS21Parser(CoreParser):
     parser may only support some properties or some values.
 
     """
-    def parse_at_rule(self, rule, stylesheet_rules, errors):
+    def parse_at_rule(self, rule, stylesheet_rules, errors, context):
         if rule.at_keyword == '@page':
+            if context != 'stylesheet':
+                raise ParseError(rule, '@page rule not allowed in ' + context)
             selector = self.parse_page_selector(rule.head)
-            if not rule.body:
-                raise ParseError(rule.head[-1] if selector else rule,
-                    'invalid @page rule: missing block')
+            self.require_at_rule_body(rule)
             declarations, at_rules = self.parse_page_block(rule.body, errors)
             return PageRule(selector, declarations, at_rules)
+
+        elif rule.at_keyword == '@media':
+            if context != 'stylesheet':
+                raise ParseError(rule, '@media rule not allowed in ' + context)
+            if not rule.head:
+                raise ParseError(rule.body, 'expected media types for @media')
+            media = self.parse_media(rule.head)
+            self.require_at_rule_body(rule)
+            statements = self.parse_statements(
+                rule.body.content, errors, '@media')
+            return MediaRule(media, statements)
+
+
+    def require_at_rule_body(self, rule):
+        """Check that the given at-rule has a body.
+
+        :param rule:
+            An unparsed :class:`AtRule`
+        :raises:
+            :class:`ParseError` if the at-rules ends with ';'
+            rather than a block '{}'
+
+        """
+        if not rule.body:
+            raise ParseError(rule,
+                'invalid {0} rule: missing block'.format(rule.at_keyword))
+
+
+    def parse_media(self, tokens):
+        """For CSS 2.1, parse a list of media types.
+
+        Media Queries are expected to override this.
+
+        :param tokens:
+            An non-empty iterable of tokens
+        :raises:
+            :class:`ParseError` on invalid media types/queries
+        :returns:
+            For CSS 2.1, a list of media types as strings
+        """
+        media_types = []
+        tokens = iter(tokens)
+        token = next(tokens)
+        while 1:
+            if token.type == 'IDENT':
+                media_types.append(token.value.lower())
+            else:
+                raise ParseError(token,
+                    'expected a media type, got {0}'.format(token.type))
+            token = next(tokens, None)
+            if not token:
+                return media_types
+            if not (token.type == 'DELIM' and token.value == ','):
+                raise ParseError(token,
+                    'expected a comma, got {0}'.format(token.type))
+            while 1:
+                next_token = next(tokens, None)
+                if not next_token:
+                    raise ParseError(token, 'expected a media type')
+                token = next_token
+                if token.type != 'S':
+                    break
 
 
     def parse_page_selector(self, head):

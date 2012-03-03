@@ -19,7 +19,7 @@ from .test_tokenizer import jsonify
 
 class TestParser(CoreParser):
     """A parser that always accepts unparsed at-rules."""
-    def parse_at_rule(self, rule, stylesheet_rules, errors):
+    def parse_at_rule(self, rule, stylesheet_rules, errors, context):
         return rule
 
 
@@ -38,7 +38,7 @@ def test_at_rules(css_source, expected_rules, expected_errors):
     assert len(stylesheet.errors) == len(expected_errors)
     for error, expected in zip(stylesheet.errors, expected_errors):
         assert expected in error.message
-    result = len(stylesheet.rules)
+    result = len(stylesheet.statements)
     assert result == expected_rules
 
 
@@ -106,7 +106,7 @@ def test_parse_stylesheet(css_source, expected_rules, expected_errors):
         (rule.selector.as_css, [
             (decl.name, list(jsonify(decl.value.content)))
             for decl in rule.declarations])
-        for rule in stylesheet.rules
+        for rule in stylesheet.statements
     ]
     assert result == expected_rules
 
