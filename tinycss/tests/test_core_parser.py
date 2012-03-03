@@ -19,8 +19,8 @@ from .test_tokenizer import jsonify
 
 class TestParser(CoreParser):
     """A parser that always accepts unparsed at-rules."""
-    def parse_at_rule(self, at_rule, stylesheet_rules, errors):
-        stylesheet_rules.append(at_rule)
+    def parse_at_rule(self, rule, stylesheet_rules, errors):
+        stylesheet_rules.append(rule)
         return True
 
 
@@ -28,6 +28,10 @@ class TestParser(CoreParser):
     (' /* hey */\n', 0, []),
     ('foo {}', 1, []),
     ('foo{} @page{} bar{}', 2, ['unknown at-rule: @page']),
+    ('@charset "ascii"; foo {}', 1, []),
+    (' @charset "ascii"; foo {}', 1, ['@charset rule not at the beginning']),
+    ('@charset ascii; foo {}', 1, ['invalid @charset']),
+    ('foo {} @charset "ascii";', 1, ['@charset rule not at the beginning']),
 ])
 def test_at_rules(css_source, expected_rules, expected_errors):
     # Not using TestParser here:

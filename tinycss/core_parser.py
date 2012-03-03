@@ -266,7 +266,7 @@ class CoreParser(object):
         return Stylesheet(rules, errors)
 
 
-    def parse_at_rule(self, at_rule, stylesheet_rules, errors):
+    def parse_at_rule(self, rule, stylesheet_rules, errors):
         """Parse an at-rule.
 
         The parser will call this methods on each of the classes in its MRO
@@ -280,7 +280,10 @@ class CoreParser(object):
         At-rules that are not handled at all are ignored with an
         "Unknown at-rule" error.
 
-        :param at_rule:
+        In :class:`CoreParser`, this method only handles @charset rules.
+        (@import, @media and @page are in :class`CSS21Parser`.)
+
+        :param rule:
             An unparsed :class:`AtRule`.
         :param stylesheet_rules:
             The list of at-rules and rulesets that have been parsed so far
@@ -292,6 +295,17 @@ class CoreParser(object):
             Whether the at-rule was handled. (bool)
 
         """
+        if rule.at_keyword == '@charset':
+            # (1, 1) assumes that the byte order mark (BOM), if any,
+            # was removed when decoding bytes to Unicode.
+            if (rule.line, rule.column) == (1, 1):
+                if not (len(rule.head) == 1 and rule.head[0].type == 'STRING'
+                        and rule.head[0].as_css[0] == '"' and not rule.body):
+                    errors.append(ParseError(rule, 'invalid @charset rule'))
+            else:
+                errors.append(ParseError(rule,
+                    '@charset rule not at the beginning of the stylesheet'))
+            return True
         return False
 
 
