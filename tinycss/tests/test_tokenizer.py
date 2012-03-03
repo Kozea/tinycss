@@ -15,7 +15,10 @@ from tinycss.tokenizer import (
     python_tokenize_flat, cython_tokenize_flat, regroup)
 
 
-@pytest.mark.parametrize(('css_source', 'expected_tokens'), [
+@pytest.mark.parametrize(('tokenize', 'css_source', 'expected_tokens'), [
+  (tokenize,) + test_data
+  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+  for test_data in [
     ('', []),
     ('red -->',
         [('IDENT', 'red'), ('S', ' '), ('CDC', '-->')]),
@@ -92,34 +95,40 @@ foo(int x) {\
         ('BAD_STRING', r'"Lorem\26Ipsum'), ('S', '\n'),
         ('IDENT', 'dolor'), ('STRING', ' sit')]),
 
-])
-def test_tokens(css_source, expected_tokens):
-    for tokenize in (python_tokenize_flat, cython_tokenize_flat):
-        tokens = tokenize(css_source, ignore_comments=False)
-        result = [
-            (token.type, token.value) + (
-                () if token.unit is None else (token.unit,))
-            for token in tokens
-        ]
-        assert result == expected_tokens
+]])
+def test_tokens(tokenize, css_source, expected_tokens):
+    if tokenize is None:
+        pytest.skip('Speedups not available')
+    tokens = tokenize(css_source, ignore_comments=False)
+    result = [
+        (token.type, token.value) + (
+            () if token.unit is None else (token.unit,))
+        for token in tokens
+    ]
+    assert result == expected_tokens
 
-
-def test_positions():
+@pytest.mark.parametrize('tokenize', [
+    python_tokenize_flat, cython_tokenize_flat])
+def test_positions(tokenize):
     """Test the reported line/column position of each token."""
+    if tokenize is None:
+        pytest.skip('Speedups not available')
     css = '/* Lorem\nipsum */\fa {\n    color: red;\tcontent: "dolor\\\fsit" }'
-    for tokenize in (python_tokenize_flat, cython_tokenize_flat):
-        tokens = tokenize(css, ignore_comments=False)
-        result = [(token.type, token.line, token.column) for token in tokens]
-        assert result == [
-            ('COMMENT', 1, 1), ('S', 2, 9),
-            ('IDENT', 3, 1), ('S', 3, 2), ('{', 3, 3),
-            ('S', 3, 4), ('IDENT', 4, 5), (':', 4, 10),
-            ('S', 4, 11), ('IDENT', 4, 12), (';', 4, 15), ('S', 4, 16),
-            ('IDENT', 4, 17), (':', 4, 24), ('S', 4, 25), ('STRING', 4, 26),
-            ('S', 5, 5), ('}', 5, 6)]
+    tokens = tokenize(css, ignore_comments=False)
+    result = [(token.type, token.line, token.column) for token in tokens]
+    assert result == [
+        ('COMMENT', 1, 1), ('S', 2, 9),
+        ('IDENT', 3, 1), ('S', 3, 2), ('{', 3, 3),
+        ('S', 3, 4), ('IDENT', 4, 5), (':', 4, 10),
+        ('S', 4, 11), ('IDENT', 4, 12), (';', 4, 15), ('S', 4, 16),
+        ('IDENT', 4, 17), (':', 4, 24), ('S', 4, 25), ('STRING', 4, 26),
+        ('S', 5, 5), ('}', 5, 6)]
 
 
-@pytest.mark.parametrize(('css_source', 'expected_tokens'), [
+@pytest.mark.parametrize(('tokenize', 'css_source', 'expected_tokens'), [
+  (tokenize,) + test_data
+  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+  for test_data in [
     ('', []),
     (r'Lorem\26 "i\psum"4px', [
         ('IDENT', 'Lorem&'), ('STRING', 'ipsum'), ('DIMENSION', 4)]),
@@ -174,12 +183,13 @@ def test_positions():
             ('IDENT', 'e'),
         ]),
     ]),
-])
-def test_token_grouping(css_source, expected_tokens):
-    for tokenize in (python_tokenize_flat, cython_tokenize_flat):
-        tokens = regroup(tokenize(css_source, ignore_comments=False))
-        result = list(jsonify(tokens))
-        assert result == expected_tokens
+]])
+def test_token_grouping(tokenize, css_source, expected_tokens):
+    if tokenize is None:
+        pytest.skip('Speedups not available')
+    tokens = regroup(tokenize(css_source, ignore_comments=False))
+    result = list(jsonify(tokens))
+    assert result == expected_tokens
 
 
 def jsonify(tokens):
@@ -194,7 +204,10 @@ def jsonify(tokens):
             yield token.type, token.value
 
 
-@pytest.mark.parametrize(('ignore_comments', 'expected_tokens'), [
+@pytest.mark.parametrize(('tokenize', 'ignore_comments', 'expected_tokens'), [
+  (tokenize,) + test_data
+  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+  for test_data in [
     (False, [
         ('COMMENT', '/* lorem */'),
         ('S', ' '),
@@ -212,16 +225,20 @@ def jsonify(tokens):
             ('IDENT', 'dolor'),
         ]),
     ]),
-])
-def test_comments(ignore_comments, expected_tokens):
+]])
+def test_comments(tokenize, ignore_comments, expected_tokens):
+    if tokenize is None:
+        pytest.skip('Speedups not available')
     css_source = '/* lorem */ ipsum[dolor/* sit */]/* amet'
-    for tokenize in (python_tokenize_flat, cython_tokenize_flat):
-        tokens = regroup(tokenize(css_source, ignore_comments))
-        result = list(jsonify(tokens))
-        assert result == expected_tokens
+    tokens = regroup(tokenize(css_source, ignore_comments))
+    result = list(jsonify(tokens))
+    assert result == expected_tokens
 
 
-@pytest.mark.parametrize('css_source', [
+@pytest.mark.parametrize(('tokenize', 'css_source'), [
+  (tokenize, test_data)
+  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+  for test_data in [
     r'''p[example="\
 foo(int x) {\
     this.x = x;\
@@ -232,10 +249,11 @@ foo(int x) {\
     'not([[lorem]]{ipsum (42)})',
     'a[b{d]e}',
     'a[b{"d',
-])
-def test_token_serialize_css(css_source):
-    for tokenize in (python_tokenize_flat, cython_tokenize_flat):
-        for _regroup in [regroup, lambda x: x]:
-            tokens = _regroup(tokenize(css_source, ignore_comments=False))
-            result = ''.join(token.as_css for token in tokens)
-            assert result == css_source
+]])
+def test_token_serialize_css(tokenize, css_source):
+    if tokenize is None:
+        pytest.skip('Speedups not available')
+    for _regroup in [regroup, lambda x: x]:
+        tokens = _regroup(tokenize(css_source, ignore_comments=False))
+        result = ''.join(token.as_css for token in tokens)
+        assert result == css_source
