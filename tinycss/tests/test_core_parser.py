@@ -11,7 +11,7 @@
 from __future__ import unicode_literals
 import pytest
 
-from tinycss.core_parser import parse
+from tinycss.core_parser import CoreParser
 
 from .test_tokenizer import jsonify
 
@@ -68,8 +68,8 @@ from .test_tokenizer import jsonify
         [('foo ', [('baz', [('UNICODE-RANGE', 'U+20')])])],
         ['unmatched ] token in (']),
 ])
-def test_core_parser(css_source, expected_rules, expected_errors):
-    stylesheet = parse(css_source)
+def test_parse_stylesheet(css_source, expected_rules, expected_errors):
+    stylesheet = CoreParser().parse_stylesheet(css_source)
     assert len(stylesheet.errors) == len(expected_errors)
     for error, expected in zip(stylesheet.errors, expected_errors):
         assert expected in error.message
@@ -83,3 +83,46 @@ def test_core_parser(css_source, expected_rules, expected_errors):
         for rule in stylesheet.rules
     ]
     assert result == expected_rules
+
+
+@pytest.mark.parametrize(('css_source', 'expected_declarations',
+                          'expected_errors'), [
+    (' /* hey */\n', [], []),
+
+    ('b:4', [('b', [('NUMBER', 4)])], []),
+
+    ('{b:4}', [], ['expected a property name, got {']),
+
+    ('b:4} c:3', [], ['unmatched } token in property value']),
+
+    (' 4px; bar: 12% ',
+        [('bar', [('PERCENTAGE', 12)])],
+        ['expected a property name, got DIMENSION']),
+
+    ('bar! 3cm auto ; baz: 7px',
+        [('baz', [('DIMENSION', 7)])],
+        ["expected ':', got DELIM"]),
+
+    ('bar ; baz: {("}"/* comment */) {0@fizz}}',
+        [('baz', [('{', [
+            ('(', [('STRING', '}')]), ('S', ' '),
+            ('{', [('NUMBER', 0), ('ATKEYWORD', '@fizz')])
+        ])])],
+        ["expected ':'"]),
+
+    ('bar: ; baz: not(z)',
+        [('baz', [('FUNCTION', 'not', [('IDENT', 'z')])])],
+        ['expected a property value']),
+
+    ('bar: (]) ; baz: U+20',
+        [('baz', [('UNICODE-RANGE', 'U+20')])],
+        ['unmatched ] token in (']),
+])
+def test_parse_style_attr(css_source, expected_declarations, expected_errors):
+    declarations, errors = CoreParser().parse_style_attr(css_source)
+    assert len(errors) == len(expected_errors)
+    for error, expected in zip(errors, expected_errors):
+        assert expected in error.message
+    result = [(decl.name, list(jsonify(decl.value.content)))
+              for decl in declarations]
+    assert result == expected_declarations
