@@ -78,6 +78,12 @@ class AtRule(object):
         A block as a '{' :class:`ContainerToken`, or ``None`` if the at-rule
         ends with ';'
 
+    .. attribute:: line
+        Source line when this was read.
+
+    .. attribute:: column
+        Source column when this was read.
+
     The head was validated against the core grammar but **not** the body,
     as the body might contain declarations. In case of an error in a
     declaration, parsing should continue from the next declaration.
@@ -124,6 +130,12 @@ class RuleSet(object):
         The list of :class:`Declaration` as returned by
         :func:`parse_declaration_list`, in source order.
 
+    .. attribute:: line
+        Source line when this was read.
+
+    .. attribute:: column
+        Source column when this was read.
+
     """
     def __init__(self, selector, declarations, line, column):
         self.selector = selector
@@ -156,6 +168,12 @@ class Declaration(object):
     .. attribute:: values
         The property value: a list of tokens as returned by
         :func:`parse_value`.
+
+    .. attribute:: line
+        Source line when this was read.
+
+    .. attribute:: column
+        Source column when this was read.
 
     """
     def __init__(self, name, value, line, column):
@@ -243,11 +261,6 @@ class CoreParser(object):
             A list of parsed statements.
 
         """
-        parse_at_rule_methods = []
-        for class_ in type(self).mro():
-            method = vars(class_).get('parse_at_rule')
-            if method:
-                parse_at_rule_methods.append(method)
         rules = []
         tokens = iter(tokens)
         for token in tokens:
@@ -255,18 +268,10 @@ class CoreParser(object):
                 try:
                     if token.type == 'ATKEYWORD':
                         rule = self.read_at_rule(token, tokens)
-                        for parse_at_rule in parse_at_rule_methods:
-                            # These are unbound methods: they need
-                            # to be passed self explicitly.
-                            result = parse_at_rule(
-                                self, rule, rules, errors, context)
-                            if result is not None:
-                                if result:
-                                    rules.append(result)
-                                break
-                        else:
-                            errors.append(ParseError(
-                                rule, 'unknown at-rule: ' + rule.at_keyword))
+                        result = self.parse_at_rule(
+                            rule, rules, errors, context)
+                        if result:
+                            rules.append(result)
                     else:
                         rule, rule_errors = self.parse_ruleset(token, tokens)
                         rules.append(rule)
@@ -280,25 +285,11 @@ class CoreParser(object):
     def parse_at_rule(self, rule, previous_rules, errors, context):
         """Parse an at-rule.
 
-        The parser will call this methods on each of the classes in its MRO
-        (in order) so these methods never need to use ``super()``.
+        Subclasses that override this method must use ``super()`` and
+        pass its return value for at-rules they do not know.
 
-        Each method can:
-
-        * Return ``None``: the at-rule was not handled, go to the
-          next method in the MRO.
-        * Return another "false" value: the at-rule was handled, but nothing
-          is to be added to the rule list. The rule is ignored.
-        * Return anything else: the rule was handled and the return value
-          is assumed to be a parsed at-rule; it is added to the rule list.
-        * Raise a :class:`ParseError`. The at-rule was handled but is
-          invalid. The rule is ignored and the error is added to the
-          error list.
-
-        At-rules that are not handled at all are ignored with an
-        "Unknown at-rule" error.
-
-        In :class:`CoreParser`, this method only handles @charset rules.
+        In :class:`CoreParser`, this method only handles @charset rules
+        and raises "unknown at-rule" for everything else.
         (@import, @media and @page are in :class`CSS21Parser`.)
 
         :param rule:
@@ -312,8 +303,10 @@ class CoreParser(object):
         :param context:
             Either 'stylesheet' or an at-keyword such as '@media'.
             (Some at-rules are only allowed in some contexts.)
+        :raises:
+            :class:`ParseError` if the rule is invalid.
         :return:
-            Whether the at-rule was handled. (bool)
+            A parsed at-rule or None (ignore)
 
         """
         if rule.at_keyword == '@charset':
@@ -330,6 +323,9 @@ class CoreParser(object):
             # The rule is valid, but ignored.
             # (It should not appear in stylesheet.rules)
             return False
+        else:
+            raise ParseError(rule, 'unknown at-rule in {0} context: {1}'
+                .format(context, rule.at_keyword))
 
 
     def read_at_rule(self, at_keyword_token, tokens):

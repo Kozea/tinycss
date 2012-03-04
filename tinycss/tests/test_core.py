@@ -26,7 +26,8 @@ class TestParser(CoreParser):
 @pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [
     (' /* hey */\n', 0, []),
     ('foo {}', 1, []),
-    ('foo{} @page{} bar{}', 2, ['unknown at-rule: @page']),
+    ('foo{} @page{} bar{}', 2,
+        ['unknown at-rule in stylesheet context: @page']),
     ('@charset "ascii"; foo {}', 1, []),
     (' @charset "ascii"; foo {}', 1, ['@charset rule not at the beginning']),
     ('@charset ascii; foo {}', 1, ['invalid @charset']),

@@ -46,13 +46,21 @@ class PageRule(object):
         The list of parsed at-rules inside the @page block.
         Always empty for CSS 2.1.
 
+    .. attribute:: line
+        Source line when this was read.
+
+    .. attribute:: column
+        Source column when this was read.
+
     """
     at_keyword = '@page'
 
-    def __init__(self, selector, declarations, at_rules):
+    def __init__(self, selector, declarations, at_rules, line, column):
         self.selector = selector
         self.declarations = declarations
         self.at_rules = at_rules
+        self.line = line
+        self.column  = column
 
 
 class MediaRule(object):
@@ -68,12 +76,52 @@ class MediaRule(object):
     .. attribute:: statements
         The list rulesets and at-rules inside the @media block.
 
+    .. attribute:: line
+        Source line when this was read.
+
+    .. attribute:: column
+        Source column when this was read.
+
     """
     at_keyword = '@media'
 
-    def __init__(self, media, statements):
+    def __init__(self, media, statements, line, column):
         self.media = media
         self.statements = statements
+        self.line = line
+        self.column  = column
+
+
+class ImportRule(object):
+    """A parsed @import rule.
+
+    .. attribute:: at_keyword
+        Always ``'@import'``
+
+    .. attribute:: uri
+        The URI to be imported, as read from the stylesheet.
+        (URIs are not made absolute.)
+
+    .. attribute:: media
+        For CSS 2.1 without media queries: the media types
+        as a list of strings.
+        This attribute is explicitly ``['all']`` if the media was omitted
+        in the source.
+
+    .. attribute:: line
+        Source line when this was read.
+
+    .. attribute:: column
+        Source column when this was read.
+
+    """
+    at_keyword = '@import'
+
+    def __init__(self, uri, media, line, column):
+        self.uri = uri
+        self.media = media
+        self.line = line
+        self.column  = column
 
 
 class CSS21Parser(CoreParser):
@@ -86,14 +134,15 @@ class CSS21Parser(CoreParser):
     parser may only support some properties or some values.
 
     """
-    def parse_at_rule(self, rule, stylesheet_rules, errors, context):
+    def parse_at_rule(self, rule, previous_rules, errors, context):
         if rule.at_keyword == '@page':
             if context != 'stylesheet':
                 raise ParseError(rule, '@page rule not allowed in ' + context)
             selector = self.parse_page_selector(rule.head)
             self.require_at_rule_body(rule)
             declarations, at_rules = self.parse_page_block(rule.body, errors)
-            return PageRule(selector, declarations, at_rules)
+            return PageRule(selector, declarations, at_rules,
+                            rule.line, rule.column)
 
         elif rule.at_keyword == '@media':
             if context != 'stylesheet':
@@ -104,7 +153,46 @@ class CSS21Parser(CoreParser):
             self.require_at_rule_body(rule)
             statements = self.parse_statements(
                 rule.body.content, errors, '@media')
-            return MediaRule(media, statements)
+            return MediaRule(media, statements, rule.line, rule.column)
+
+        elif rule.at_keyword == '@import':
+            if context != 'stylesheet':
+                raise ParseError(rule,
+                    '@import rule not allowed in ' + context)
+            for previous_rule in previous_rules:
+                if previous_rule.at_keyword not in ('@charset', '@import'):
+                    if previous_rule.at_keyword:
+                        type_ = 'an {0} rule'.format(previous_rule.at_keyword)
+                    else:
+                        type_ = 'a ruleset'
+                    raise ParseError(previous_rule,
+                        '@import rule not allowed after ' + type_)
+            head = rule.head
+            if not head:
+                raise ParseError(rule,
+                    'expected URI or STRING for @import rule')
+            if head[0].type not in ('URI', 'STRING'):
+                raise ParseError(rule,
+                    'expected URI or STRING for @import rule, got '
+                    + head[0].type)
+            uri = head[0].value
+            if len(head) == 1:
+                media = ['all']
+            else:
+                for i, token in enumerate(head[1:], 1):
+                    if token.type != 'S':
+                        media = self.parse_media(head[i:])
+                        break
+                else:  # pragma: no cover
+                    # This is unreachable since the core parser has removed
+                    # any trailing white space in head.
+                    media = ['all']
+            if rule.body:
+                raise ParseError(rule.body, "expected ';', got a block")
+            return ImportRule(uri, media, rule.line, rule.column)
+
+        return super(CSS21Parser, self).parse_at_rule(
+            rule, previous_rules, errors, context)
 
 
     def require_at_rule_body(self, rule):
@@ -200,12 +288,10 @@ class CSS21Parser(CoreParser):
             if token.type == 'ATKEYWORD':
                 try:
                     rule = self.read_at_rule(token, tokens)
-                    parsed_rule = self.parse_page_at_rule(rule)
-                    if not parsed_rule:
-                        raise ParseError(rule,
-                            'unknown at-rule in @page context: '
-                            + rule.at_keyword)
-                    at_rules.append(parsed_rule)
+                    result = self.parse_at_rule(
+                        rule, at_rules, errors, '@page')
+                    if result:
+                        at_rules.append(result)
                 except ParseError as err:
                     errors.append(err)
             elif token.type != 'S':
@@ -220,16 +306,6 @@ class CSS21Parser(CoreParser):
                     except ParseError as err:
                         errors.append(err)
         return declarations, at_rules
-
-    def parse_page_at_rule(self, rule):
-        """Parse an at-rule in the page context. (Always an error in CSS 2.1)
-
-        :param rule:
-            An unparsed :class:`AtRule` read in the @page context.
-        :returns:
-            A parsed at-rule, or None (unknown rule)
-
-        """
 
 
     def parse_declaration(self, *args, **kwargs):
