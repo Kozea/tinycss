@@ -13,7 +13,7 @@
     :license: BSD, see LICENSE for more details.
 """
 
-from __future__ import unicode_literals
+from __future__ import unicode_literals, division
 import itertools
 import re
 
@@ -26,9 +26,7 @@ def parse_color_string(css_string):
     :param css_string:
         An unicode string in CSS syntax.
     :returns:
-        ``(r, g, b, a)`` as four floats if the strings parses to a single
-        token, and that token is a valid CSS 3 color value.
-        ``None`` otherwise. (No exception is raised.)
+        Same as :func:`parse_color`.
 
     """
     tokens = list(tokenize_grouped(css_string.strip()))
@@ -39,12 +37,22 @@ def parse_color_string(css_string):
 def parse_color(token):
     """Parse single token as a color value.
 
+    The (deprecated) CSS2 system colors are not supported, but you can
+    easily test for them if you want as they are simple IDENT tokens.
+
     :param token:
         A single :class:`Token` or :class:`ContainerToken`, as found eg.
         in a property value.
     :returns:
-        ``(r, g, b, a)`` as four floats if the token is a valid
-        CSS 3 color value; ``None`` otherwise. (No exception is raised.)
+        * None, if the string is not a valid CSS 3 color value.
+          (No exception is raised.)
+        * For the currentColor keyword: the string 'currentColor'
+        * Every other values (including HSL and HSLA) is converted to RGBA
+          and returned as a tuple of four floats in the 0..1 range:
+          ``(r, g, b, a)``
+          The alpha channel is clipped to [0, 1], but R, G, or B can be
+          out of range (eg. ``rgb(-51, 306, 0)`` is returned as
+          ``(-.2, 1.2, 0, 1)``.)
 
     """
     if token.type == 'IDENT':
@@ -53,21 +61,113 @@ def parse_color(token):
         for multiplier, regexp in HASH_REGEXPS:
             match = regexp(token.value)
             if match:
-                r, g, b = [int(group * multiplier, 16) / 255.
+                r, g, b = [int(group * multiplier, 16) / 255
                            for group in match.groups()]
                 return r, g, b, 1.
-    # Not tested yet:
-#    elif token.type == 'FUNCTION':
-#        name = token.function_name
-#        args = token.content
-#        types = [arg.type for arg in args]
-#        if name == 'rgb':
-#            if types == ['INTEGER', 'INTEGER', 'INTEGER']:
-#                r, g, b = [arg.value / 255. for arg in args]
-#                return r, g, b, 1.
-#            elif types == ['PERCENTAGE', 'PERCENTAGE','PERCENTAGE']:
-#                r, g, b = [arg.value / 100. for arg in args]
-#                return r, g, b, 1.
+    elif token.type == 'FUNCTION':
+        args = parse_comma_separated(token.content)
+        if args:
+            name = token.function_name.lower()
+            if name ==  'rgb':
+                return parse_rgb(args, alpha=1.)
+            elif name == 'rgba':
+                alpha = parse_alpha(args[3:])
+                if alpha is not None:
+                    return parse_rgb(args[:3], alpha)
+            elif name == 'hsl':
+                return parse_hsl(args, alpha=1.)
+            elif name == 'hsla':
+                alpha = parse_alpha(args[3:])
+                if alpha is not None:
+                    return parse_hsl(args[:3], alpha)
+
+
+def parse_alpha(args):
+    """
+    If args is a list of a single INTEGER or NUMBER token,
+    retur its value clipped to the 0..1 range
+    Otherwise, return None.
+    """
+    if len(args) == 1 and args[0].type in ('NUMBER', 'INTEGER'):
+        return min(1, max(0, args[0].value))
+
+
+def parse_rgb(args, alpha):
+    """
+    If args is a list of 3 INTEGER tokens or 3 PERCENTAGE tokens,
+    return RGB values as a tuple of 3 floats in 0..1.
+    Otherwise, return None.
+    """
+    types = [arg.type for arg in args]
+    if types == ['INTEGER', 'INTEGER', 'INTEGER']:
+        r, g, b = [arg.value / 255 for arg in args[:3]]
+        return r, g, b, alpha
+    elif types == ['PERCENTAGE', 'PERCENTAGE','PERCENTAGE']:
+        r, g, b = [arg.value / 100 for arg in args[:3]]
+        return r, g, b, alpha
+
+
+def parse_hsl(args, alpha):
+    """
+    If args is a list of 1 INTEGER token and 2 PERCENTAGE tokens,
+    return RGBA values as a tuple of 3 floats in 0..1.
+    Otherwise, return None.
+    """
+    types = [arg.type for arg in args]
+    if types == ['INTEGER', 'PERCENTAGE', 'PERCENTAGE']:
+        hsl = [arg.value for arg in args[:3]]
+        r, g, b = hsl_to_rgb(*hsl)
+        return r, g, b, alpha
+
+
+def hsl_to_rgb(hue, saturation, lightness):
+    """
+    :param hue: degrees
+    :param saturation: percentage
+    :param lightness: percentage
+    :returns: (r, g, b) as floats in the 0..1 range
+    """
+    hue = (hue / 360) % 1
+    saturation = min(1, max(0, saturation / 100))
+    lightness = min(1, max(0, lightness / 100))
+
+    # Translated from ABC: http://www.w3.org/TR/css3-color/#hsl-color
+    def hue_to_rgb(m1, m2, h):
+        if h < 0: h += 1
+        if h > 1: h -= 1
+        if h * 6 < 1: return m1 + (m2 - m1) * h * 6
+        if h * 2 < 1: return m2
+        if h * 3 < 2: return m1 + (m2 - m1) * (2/3 - h) * 6
+        return m1
+
+    if lightness <= 0.5:
+        m2 = lightness * (saturation + 1)
+    else:
+        m2 = lightness + saturation - lightness * saturation
+    m1 = lightness * 2 - m2
+    return (
+        hue_to_rgb(m1, m2, hue + 1/3),
+        hue_to_rgb(m1, m2, hue),
+        hue_to_rgb(m1, m2, hue - 1/3),
+    )
+
+
+def parse_comma_separated(tokens):
+    """Parse a list of tokens (typically the content of a function token)
+    as arguments made of a single token each, separated by mandatory commas,
+    with optional white space around each argument.
+
+    return the argument list without commas or white space;
+    or None if the function token content do not match the description above.
+
+    """
+    tokens = [token for token in tokens if token.type != 'S']
+    if not tokens:
+        return []
+    if len(tokens) % 2 == 1 and all(
+            token.type == 'DELIM' and token.value == ','
+            for token in tokens[1::2]):
+        return tokens[::2]
 
 
 HASH_REGEXPS = (
