@@ -123,7 +123,11 @@ def tokenize_flat(css_source, int ignore_comments=1):
                 unit = '%'
             elif type_ == NUMBER:
                 value = css_value
-                value = float(value) if '.' in value else int(value)
+                if '.' in value:
+                    value = float(value)
+                else:
+                    value = int(value)
+                    type_name = 'INTEGER'
             elif type_ in (IDENT, ATKEYWORD, HASH, FUNCTION):
                 value = unicode_unescape(css_value)
                 value = simple_unescape(value)

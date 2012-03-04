@@ -39,8 +39,9 @@ foo(int x) {\
         (']', ']')]),
 
     #### Numbers are parsed
-    ('42 -4pX 1.25em 30%',
-        [('NUMBER', 42), ('S', ' '),
+    ('42 .5 -4pX 1.25em 30%',
+        [('INTEGER', 42), ('S', ' '),
+         ('NUMBER', .5), ('S', ' '),
          # units are normalized to lower-case:
          ('DIMENSION', -4, 'px'), ('S', ' '),
          ('DIMENSION', 1.25, 'em'), ('S', ' '),
@@ -144,7 +145,7 @@ def test_positions(tokenize):
                 ('IDENT', 'ipsum'),
                 ('S', ' '),
                 ('(', [
-                    ('NUMBER', 42),
+                    ('INTEGER', 42),
                 ])
             ])
         ])]),

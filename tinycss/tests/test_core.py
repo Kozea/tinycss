@@ -56,10 +56,10 @@ def test_at_rules(css_source, expected_rules, expected_errors):
 
     ('{}', [('', [])], []),
 
-    ('a{b:4}', [('a', [('b', [('NUMBER', 4)])])], []),
+    ('a{b:4}', [('a', [('b', [('INTEGER', 4)])])], []),
 
     ('@page {\t b: 4; @margin}', [('@page', [], [
-       ('S', '\t '), ('IDENT', 'b'), (':', ':'), ('S', ' '), ('NUMBER', 4),
+       ('S', '\t '), ('IDENT', 'b'), (':', ':'), ('S', ' '), ('INTEGER', 4),
        (';', ';'), ('S', ' '), ('ATKEYWORD', '@margin'),
     ])], []),
 
@@ -83,7 +83,7 @@ def test_at_rules(css_source, expected_rules, expected_errors):
     ('foo { bar ; baz: {("}"/* comment */) {0@fizz}} }',
         [('foo ', [('baz', [('{', [
             ('(', [('STRING', '}')]), ('S', ' '),
-            ('{', [('NUMBER', 0), ('ATKEYWORD', '@fizz')])
+            ('{', [('INTEGER', 0), ('ATKEYWORD', '@fizz')])
         ])])])],
         ["expected ':'"]),
 
@@ -116,7 +116,7 @@ def test_parse_stylesheet(css_source, expected_rules, expected_errors):
                           'expected_errors'), [
     (' /* hey */\n', [], []),
 
-    ('b:4', [('b', [('NUMBER', 4)])], []),
+    ('b:4', [('b', [('INTEGER', 4)])], []),
 
     ('{b:4}', [], ['expected a property name, got {']),
 
@@ -133,7 +133,7 @@ def test_parse_stylesheet(css_source, expected_rules, expected_errors):
     ('bar ; baz: {("}"/* comment */) {0@fizz}}',
         [('baz', [('{', [
             ('(', [('STRING', '}')]), ('S', ' '),
-            ('{', [('NUMBER', 0), ('ATKEYWORD', '@fizz')])
+            ('{', [('INTEGER', 0), ('ATKEYWORD', '@fizz')])
         ])])],
         ["expected ':'"]),
 

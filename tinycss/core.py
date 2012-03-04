@@ -556,7 +556,7 @@ class CoreParser(object):
             for token in token.content:
                 self.validate_any(token, type_)
         elif type_ not in ('S', 'IDENT', 'DIMENSION', 'PERCENTAGE', 'NUMBER',
-                           'URI', 'DELIM', 'STRING', 'HASH', ':',
+                           'INTEGER', 'URI', 'DELIM', 'STRING', 'HASH', ':',
                            'UNICODE-RANGE'):
             if type_ in ('}', ')', ']'):
                 adjective = 'unmatched'

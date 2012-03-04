@@ -61,16 +61,16 @@ def test_at_import(css_source, expected_rules, expected_errors):
 
     ('@page;', [], ['invalid @page rule: missing block']),
     ('@page { a:1; ; b: 2 }',
-        [(None, [('a', [('NUMBER', 1)]), ('b', [('NUMBER', 2)])])],
+        [(None, [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])])],
         []),
     ('@page { a:1; c: ; b: 2 }',
-        [(None, [('a', [('NUMBER', 1)]), ('b', [('NUMBER', 2)])])],
+        [(None, [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])])],
         ['expected a property value']),
     ('@page { a:1; @top-left {} b: 2 }',
-        [(None, [('a', [('NUMBER', 1)]), ('b', [('NUMBER', 2)])])],
+        [(None, [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])])],
         ['unknown at-rule in @page context: @top-left']),
     ('@page { a:1; @top-left {}; b: 2 }',
-        [(None, [('a', [('NUMBER', 1)]), ('b', [('NUMBER', 2)])])],
+        [(None, [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])])],
         ['unknown at-rule in @page context: @top-left']),
 ])
 def test_at_page(css_source, expected_rules, expected_errors):
@@ -97,13 +97,13 @@ def test_at_page(css_source, expected_rules, expected_errors):
     ('@media screen, print {}', [(['screen', 'print'], [])], []),
     ('@media all;', [], ['invalid @media rule: missing block']),
     ('@media  {}', [], ['expected media types for @media']),
-    ('@media 4 {}', [], ['expected a media type, got NUMBER']),
+    ('@media 4 {}', [], ['expected a media type, got INTEGER']),
     ('@media , screen {}', [], ['expected a media type, got DELIM']),
     ('@media screen, {}', [], ['expected a media type']),
     ('@media screen print {}', [], ['expected a comma, got S']),
 
     ('@media all { @page { a: 1 } @media; @import; foo { a: 1 } }',
-        [(['all'], [('foo ', [('a', [('NUMBER', 1)])])])],
+        [(['all'], [('foo ', [('a', [('INTEGER', 1)])])])],
         ['@page rule not allowed in @media',
          '@media rule not allowed in @media',
          '@import rule not allowed in @media']),
@@ -134,23 +134,23 @@ def test_at_media(css_source, expected_rules, expected_errors):
     (' /* hey */\n', [], []),
 
     ('a:1; b:2',
-        [('a', [('NUMBER', 1)], None), ('b', [('NUMBER', 2)], None)], []),
+        [('a', [('INTEGER', 1)], None), ('b', [('INTEGER', 2)], None)], []),
 
     ('a:1 important; b: important',
-        [('a', [('NUMBER', 1), ('S', ' '), ('IDENT', 'important')], None),
+        [('a', [('INTEGER', 1), ('S', ' '), ('IDENT', 'important')], None),
             ('b', [('IDENT', 'important')], None)],
         []),
 
     ('a:1 !important; b:2',
-        [('a', [('NUMBER', 1)], 'important'), ('b', [('NUMBER', 2)], None)],
+        [('a', [('INTEGER', 1)], 'important'), ('b', [('INTEGER', 2)], None)],
         []),
 
     ('a:1!\t important; b:2',
-        [('a', [('NUMBER', 1)], 'important'), ('b', [('NUMBER', 2)], None)],
+        [('a', [('INTEGER', 1)], 'important'), ('b', [('INTEGER', 2)], None)],
         []),
 
     ('a: !important; b:2',
-        [('b', [('NUMBER', 2)], None)],
+        [('b', [('INTEGER', 2)], None)],
         ['expected a value before !important']),
 
 ])
