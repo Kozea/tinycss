@@ -155,6 +155,8 @@ from tinycss.color3 import parse_color_string, hsl_to_rgb
     ('hsla(0, 0%)', None),
     ('hsla(0, 0%, 0%, 50%)', None),
     ('hsla(0, 0%, 0%, 1, 0%)', None),
+
+    ('cmyk(0, 0, 0, 0)', None),
 ])
 def test_color(css_source, expected_result):
     result = parse_color_string(css_source)

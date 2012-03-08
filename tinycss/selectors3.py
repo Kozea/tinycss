@@ -193,7 +193,8 @@ def _calculate_specificity(parsed_selector):
     elif isinstance(parsed_selector, cssselect.Hash):
         a, b, c = _calculate_specificity(parsed_selector.selector)
         return a + 1, b, c
-    elif isinstance(parsed_selector, cssselect.CombinedSelector):
+    else:
+        assert isinstance(parsed_selector, cssselect.CombinedSelector)
         a1, b1, c1 = _calculate_specificity(parsed_selector.selector)
         a2, b2, c2 = _calculate_specificity(parsed_selector.subselector)
         return a1 + a2, b1 + b2, c1 + c2
