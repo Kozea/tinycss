@@ -124,7 +124,8 @@ class RuleSet(object):
         Always ``None``. Helps to tell rulesets apart from at-rules.
 
     .. attribute:: selector
-        A (possibly empty) :class:`ContainerToken`
+        A (possibly empty) :class:`ContainerToken` object.
+        In CSS 3 terminology, this is actually a selector group.
 
     .. attribute:: declarations
         The list of :class:`Declaration` as returned by
