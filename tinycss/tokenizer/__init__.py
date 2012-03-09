@@ -16,7 +16,6 @@ import re
 import sys
 import operator
 import functools
-from string import Formatter
 
 
 # * Raw strings with the r'' notation are used so that \ do not need
@@ -119,13 +118,15 @@ COMPILED_TOKEN_INDEXES = {}  # {name: i}  helper for the C speedups
 def _init():
     """Import-time initialization."""
     COMPILED_MACROS.clear()
-    expand_macros = functools.partial(
-        Formatter().vformat, args=(), kwargs=COMPILED_MACROS)
+    # Formatter is broken on PyPy: https://bugs.pypy.org/issue1081
+#    expand_macros = functools.partial(
+#        Formatter().vformat, args=(), kwargs=COMPILED_MACROS)
 
     for line in MACROS.splitlines():
         if line.strip():
             name, value = line.split('\t')
-            COMPILED_MACROS[name.strip()] = '(?:%s)' % expand_macros(value)
+            COMPILED_MACROS[name.strip()] = '(?:%s)' \
+                % value.format(**COMPILED_MACROS)
 
     del COMPILED_TOKEN_REGEXPS[:]
     for line in TOKENS.splitlines():
@@ -134,7 +135,7 @@ def _init():
             COMPILED_TOKEN_REGEXPS.append((
                 name.strip(),
                 re.compile(
-                    expand_macros(value),
+                    value.format(**COMPILED_MACROS),
                     # Case-insensitive when matching eg. uRL(foo)
                     # but preserve the case in extracted groups
                     re.I
