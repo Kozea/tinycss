@@ -13,13 +13,17 @@ from __future__ import unicode_literals
 import pytest
 
 from tinycss.core import CoreParser
-from tinycss.selectors3 import (
-    Selector, InvalidSelectorError, Selectors3ParserMixin,
-    parse_selector_string, parse_selector_group_string)
+try:
+    import lxml.cssselect
+except ImportError:
+    lxml = None
+else:
+    from tinycss.selectors3 import (
+        Selector, InvalidSelectorError, Selectors3ParserMixin,
+        parse_selector_string, parse_selector_group_string)
 
-
-class CSSParser(Selectors3ParserMixin, CoreParser):
-    """Custom CSS parser."""
+    class CSSParser(Selectors3ParserMixin, CoreParser):
+        """Custom CSS parser."""
 
 
 @pytest.mark.parametrize(('css_source', 'expected_num_selectors',
@@ -32,6 +36,8 @@ class CSSParser(Selectors3ParserMixin, CoreParser):
     ('foo > {}', [], ["Expected selector, got 'None'"]),
 ])
 def test_parser(css_source, expected_num_selectors, expected_errors):
+    if lxml is None:  # pragma: no cover
+        pytest.skip('lxml not available')
     stylesheet = CSSParser().parse_stylesheet(css_source)
     assert len(stylesheet.errors) == len(expected_errors)
     for error, expected in zip(stylesheet.errors, expected_errors):
@@ -72,6 +78,8 @@ def test_parser(css_source, expected_num_selectors, expected_errors):
         ((0, 2, 1, 3), 'first-line')),
 ])
 def test_selector(css_source, expected_result):
+    if lxml is None:  # pragma: no cover
+        pytest.skip('lxml not available')
     try:
         result = parse_selector_string(css_source)
     except InvalidSelectorError as exc:
@@ -93,6 +101,8 @@ def test_selector(css_source, expected_result):
         [((0, 2, 1, 3), 'first-line'), ((0, 1, 0, 0), None)]),
 ])
 def test_selector_group(css_source, expected_result):
+    if lxml is None:  # pragma: no cover
+        pytest.skip('lxml not available')
     try:
         result = parse_selector_group_string(css_source)
     except InvalidSelectorError as exc:
