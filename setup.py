@@ -21,7 +21,7 @@ setup(
     packages=find_packages(),
     cmdclass = {'build_ext': build_ext},
     ext_modules=[Extension(
-        'tinycss.tokenizer._speedups',
-        sources=[os.path.join('tinycss', 'tokenizer', '_speedups.pyx')]
+        'tinycss.speedups',
+        sources=[os.path.join('tinycss', 'speedups.pyx')]
     )],
 )

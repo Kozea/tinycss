@@ -1,9 +1,11 @@
 # coding: utf8
 """
-    tinycss.tokenizer._speedups
-    ---------------------------
+    tinycss.speedups
+    ----------------
 
-    Cython version of the tokenizer’s inner loop.
+    Cython module for speeding up inner loops.
+
+    Right now only :func:`tokenize_flat` has a second implementation.
 
     :copyright: (c) 2010 by Simon Sapin.
     :license: BSD, see LICENSE for more details.
@@ -11,7 +13,7 @@
 
 from __future__ import unicode_literals
 
-from . import (
+from .token_data import (
     COMPILED_TOKEN_REGEXPS, UNICODE_UNESCAPE, NEWLINE_UNESCAPE,
     SIMPLE_UNESCAPE, FIND_NEWLINES, Token)
 

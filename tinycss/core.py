@@ -16,7 +16,8 @@ import functools
 import sys
 import re
 
-from .tokenizer import tokenize_grouped, ContainerToken
+from .tokenizer import tokenize_grouped
+from .token_data import ContainerToken
 
 
 #  stylesheet  : [ CDO | CDC | S | statement ]*;
