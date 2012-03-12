@@ -14,11 +14,11 @@ import os
 import pytest
 try:
     import lxml.cssselect
-except ImportError:
-    lxml = None
-
-from tinycss.core import CoreParser
-if lxml is not None:
+except ImportError:  # pragma: no cover
+    LXML_INSTALLED = False
+else:
+    LXML_INSTALLED = True
+    from tinycss.core import CoreParser
     from tinycss.selectors3 import (
         Selector, InvalidSelectorError, Selectors3ParserMixin,
         parse_selector_string, parse_selector_group_string)
@@ -29,7 +29,7 @@ if lxml is not None:
 
 def test_lxml():
     if not os.environ.get('TINYCSS_SKIP_LXML_TESTS'):
-        assert lxml is not None, (
+        assert LXML_INSTALLED, (
             'lxml is not not installed, related tests will be skipped. '
             'Set the TINYCSS_SKIP_LXML_TESTS environment variable '
             'if this is expected (eg. on PyPy).')
@@ -45,7 +45,7 @@ def test_lxml():
     ('foo > {}', [], ["Expected selector, got 'None'"]),
 ])
 def test_parser(css_source, expected_num_selectors, expected_errors):
-    if lxml is None:  # pragma: no cover
+    if not LXML_INSTALLED:  # pragma: no cover
         pytest.skip('lxml not available')
     stylesheet = CSSParser().parse_stylesheet(css_source)
     assert len(stylesheet.errors) == len(expected_errors)
@@ -87,13 +87,12 @@ def test_parser(css_source, expected_num_selectors, expected_errors):
         ((0, 2, 1, 3), 'first-line')),
 ])
 def test_selector(css_source, expected_result):
-    if lxml is None:  # pragma: no cover
+    if not LXML_INSTALLED:  # pragma: no cover
         pytest.skip('lxml not available')
     try:
         result = parse_selector_string(css_source)
-    except InvalidSelectorError as exc:
+    except InvalidSelectorError:
         result = None
-#        print(exc)
     else:
         result = result.specificity, result.pseudo_element
     assert result == expected_result
@@ -110,13 +109,12 @@ def test_selector(css_source, expected_result):
         [((0, 2, 1, 3), 'first-line'), ((0, 1, 0, 0), None)]),
 ])
 def test_selector_group(css_source, expected_result):
-    if lxml is None:  # pragma: no cover
+    if not LXML_INSTALLED:  # pragma: no cover
         pytest.skip('lxml not available')
     try:
         result = parse_selector_group_string(css_source)
-    except InvalidSelectorError as exc:
+    except InvalidSelectorError:
         result = None
-#        print(exc)
     else:
         result = [(selector.specificity, selector.pseudo_element)
                   for selector in result]

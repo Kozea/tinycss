@@ -14,10 +14,6 @@
 
 from __future__ import unicode_literals
 
-import re
-import sys
-import operator
-import functools
 from . import token_data
 
 

@@ -130,12 +130,12 @@ def test_parse_stylesheet(css_source, expected_rules, expected_errors):
         [('baz', [('DIMENSION', 7)])],
         ["expected ':', got DELIM"]),
 
-    ('bar ; baz: {("}"/* comment */) {0@fizz}}',
+    ('foo; bar ; baz: {("}"/* comment */) {0@fizz}}',
         [('baz', [('{', [
             ('(', [('STRING', '}')]), ('S', ' '),
             ('{', [('INTEGER', 0), ('ATKEYWORD', '@fizz')])
         ])])],
-        ["expected ':'"]),
+        ["expected ':'", "expected ':'"]),
 
     ('bar: ; baz: not(z)',
         [('baz', [('FUNCTION', 'not', [('IDENT', 'z')])])],

@@ -12,9 +12,6 @@
 
 from __future__ import unicode_literals
 from itertools import chain
-import functools
-import sys
-import re
 
 from .tokenizer import tokenize_grouped
 from .token_data import ContainerToken
@@ -278,8 +275,8 @@ class CoreParser(object):
                         rule, rule_errors = self.parse_ruleset(token, tokens)
                         rules.append(rule)
                         errors.extend(rule_errors)
-                except ParseError as e:
-                    errors.append(e)
+                except ParseError as exc:
+                    errors.append(exc)
                     # Skip the entire rule
         return rules
 
@@ -448,8 +445,8 @@ class CoreParser(object):
         for part in parts:
             try:
                 declarations.append(self.parse_declaration(part))
-            except ParseError as e:
-                errors.append(e)
+            except ParseError as exc:
+                errors.append(exc)
                 # Skip the entire declaration
         return declarations, errors
 
@@ -479,6 +476,7 @@ class CoreParser(object):
             raise ParseError(name_token,
                 'expected a property name, got {0}'.format(name_token.type))
 
+        token = name_token  # In case ``tokens`` is now empty
         for token in tokens:
             if token.type == ':':
                 break
