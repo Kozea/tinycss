@@ -9,10 +9,20 @@
 
 
 from __future__ import unicode_literals
+import os
+
 import pytest
 
 from tinycss.tokenizer import (
     python_tokenize_flat, cython_tokenize_flat, regroup)
+
+
+def test_speedups():
+    if not os.environ.get('TINYCSS_SKIP_SPEEDUPS_TESTS'):
+        assert cython_tokenize_flat is not None, (
+            'Cython speedups are not installed, related tests will '
+            'be skipped. Set the TINYCSS_SKIP_SPEEDUPS_TESTS environment '
+            'variable if this is expected (eg. on PyPy).')
 
 
 @pytest.mark.parametrize(('tokenize', 'css_source', 'expected_tokens'), [

@@ -9,21 +9,30 @@
 
 
 from __future__ import unicode_literals
+import os
 
 import pytest
-
-from tinycss.core import CoreParser
 try:
     import lxml.cssselect
 except ImportError:
     lxml = None
-else:
+
+from tinycss.core import CoreParser
+if lxml is not None:
     from tinycss.selectors3 import (
         Selector, InvalidSelectorError, Selectors3ParserMixin,
         parse_selector_string, parse_selector_group_string)
 
     class CSSParser(Selectors3ParserMixin, CoreParser):
         """Custom CSS parser."""
+
+
+def test_lxml():
+    if not os.environ.get('TINYCSS_SKIP_LXML_TESTS'):
+        assert lxml is not None, (
+            'lxml is not not installed, related tests will be skipped. '
+            'Set the TINYCSS_SKIP_LXML_TESTS environment variable '
+            'if this is expected (eg. on PyPy).')
 
 
 @pytest.mark.parametrize(('css_source', 'expected_num_selectors',
