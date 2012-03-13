@@ -1,15 +1,16 @@
 import re
 import sys
 import os.path
-from setuptools import setup, find_packages, Extension
-from distutils.errors import CCompilerError, DistutilsExecError, \
-    DistutilsPlatformError
+from distutils.core import setup
+from distutils.extension import Extension
+from distutils.errors import (
+    CCompilerError, DistutilsExecError, DistutilsPlatformError)
 try:
     from Cython.Distutils import build_ext
     import Cython.Compiler.Version
     CYTHON_INSTALLED = True
 except ImportError:
-    from setuptools.command.build_ext import build_ext
+    from distutils.command.build_ext import build_ext
     CYTHON_INSTALLED = False
 
 
@@ -75,7 +76,7 @@ def run_setup(with_extension):
         author='Simon Sapin',
         author_email='simon.sapin@exyr.org',
         description='A CSS parser, and nothing else.',
-        packages=find_packages(),
+        packages=['tinycss', 'tinycss.tests'],
         **kwargs
     )
 
