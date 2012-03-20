@@ -1,7 +1,7 @@
 # coding: utf8
 """
-    Test suite for tinycss
-    ----------------------
+    Tests for the tokenizer
+    -----------------------
 
     :copyright: (c) 2010 by Simon Sapin.
     :license: BSD, see LICENSE for more details.
