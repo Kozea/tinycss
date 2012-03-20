@@ -46,7 +46,7 @@ def decode(css_bytes, protocol_encoding=None,
         css_unicode = try_encoding(css_bytes, protocol_encoding)
         if css_unicode is not None:
             return css_unicode
-    for bom_size, encoding, pattern in ENCODING_MAGIC_NUMBERS:
+    for encoding, pattern in ENCODING_MAGIC_NUMBERS:
         match = pattern(css_bytes)
         if match:
             has_at_charset = isinstance(encoding, tuple)
@@ -101,51 +101,51 @@ Slice = Slicer()
 #   slice_ is a slice object.How to extract the specified
 
 ENCODING_MAGIC_NUMBERS = [
-    (3, (Slice[:], ''), re.compile(
+    ((Slice[:], ''), re.compile(
         hex2re('EF BB BF 40 63 68 61 72 73 65 74 20 22')
         + b'([^\x22]*?)'
         + hex2re('22 3B')).match),
 
-    (3, 'UTF-8', re.compile(
+    ('UTF-8', re.compile(
         hex2re('EF BB BF')).match),
 
-    (0, (Slice[:], ''), re.compile(
+    ((Slice[:], ''), re.compile(
         hex2re('40 63 68 61 72 73 65 74 20 22')
         + b'([^\x22]*?)'
         + hex2re('22 3B')).match),
 
-    (2, (Slice[1::2], '-BE'), re.compile(
+    ((Slice[1::2], '-BE'), re.compile(
         hex2re('FE FF 00 40 00 63 00 68 00 61 00 72 00 73 00 65 00'
                '74 00 20 00 22')
         + b'((\x00[^\x22])*?)'
         + hex2re('00 22 00 3B')).match),
 
-    (0, (Slice[1::2], '-BE'), re.compile(
+    ((Slice[1::2], '-BE'), re.compile(
         hex2re('00 40 00 63 00 68 00 61 00 72 00 73 00 65 00 74 00'
                '20 00 22')
         + b'((\x00[^\x22])*?)'
         + hex2re('00 22 00 3B')).match),
 
-    (2, (Slice[::2], '-LE'), re.compile(
+    ((Slice[::2], '-LE'), re.compile(
         hex2re('FF FE 40 00 63 00 68 00 61 00 72 00 73 00 65 00 74'
                '00 20 00 22 00')
         + b'(([^\x22]\x00)*?)'
         + hex2re('22 00 3B 00')).match),
 
-    (0, (Slice[::2], '-LE'), re.compile(
+    ((Slice[::2], '-LE'), re.compile(
         hex2re('40 00 63 00 68 00 61 00 72 00 73 00 65 00 74 00 20'
                '00 22 00')
         + b'(([^\x22]\x00)*?)'
         + hex2re('22 00 3B 00')).match),
 
-    (4, (Slice[3::4], '-BE'), re.compile(
+    ((Slice[3::4], '-BE'), re.compile(
         hex2re('00 00 FE FF 00 00 00 40 00 00 00 63 00 00 00 68 00'
                '00 00 61 00 00 00 72 00 00 00 73 00 00 00 65 00 00'
                '00 74 00 00 00 20 00 00 00 22')
         + b'((\x00\x00\x00[^\x22])*?)'
         + hex2re('00 00 00 22 00 00 00 3B')).match),
 
-    (0, (Slice[3::4], '-BE'), re.compile(
+    ((Slice[3::4], '-BE'), re.compile(
         hex2re('00 00 00 40 00 00 00 63 00 00 00 68 00 00 00 61 00'
                '00 00 72 00 00 00 73 00 00 00 65 00 00 00 74 00 00'
                '00 20 00 00 00 22')
@@ -156,64 +156,64 @@ ENCODING_MAGIC_NUMBERS = [
 # Python does not support 2143 or 3412 endianness, AFAIK.
 # I guess we could fix it up ourselves but meh. Patches welcome.
 
-#    (4, (Slice[2::4], '-2143'), re.compile(
+#    ((Slice[2::4], '-2143'), re.compile(
 #        hex2re('00 00 FF FE 00 00 40 00 00 00 63 00 00 00 68 00 00'
 #               '00 61 00 00 00 72 00 00 00 73 00 00 00 65 00 00 00'
 #               '74 00 00 00 20 00 00 00 22 00')
 #        + b'((\x00\x00[^\x22]\x00)*?)'
 #        + hex2re('00 00 22 00 00 00 3B 00')).match),
 
-#    (0, (Slice[2::4], '-2143'), re.compile(
+#    ((Slice[2::4], '-2143'), re.compile(
 #        hex2re('00 00 40 00 00 00 63 00 00 00 68 00 00 00 61 00 00'
 #               '00 72 00 00 00 73 00 00 00 65 00 00 00 74 00 00 00'
 #               '20 00 00 00 22 00')
 #        + b'((\x00\x00[^\x22]\x00)*?)'
 #        + hex2re('00 00 22 00 00 00 3B 00')).match),
 
-#    (4, (Slice[1::4], '-3412'), re.compile(
+#    ((Slice[1::4], '-3412'), re.compile(
 #        hex2re('FE FF 00 00 00 40 00 00 00 63 00 00 00 68 00 00 00'
 #               '61 00 00 00 72 00 00 00 73 00 00 00 65 00 00 00 74'
 #               '00 00 00 20 00 00 00 22 00 00')
 #        + b'((\x00[^\x22]\x00\x00)*?)'
 #        + hex2re('00 22 00 00 00 3B 00 00')).match),
 
-#    (0, (Slice[1::4], '-3412'), re.compile(
+#    ((Slice[1::4], '-3412'), re.compile(
 #        hex2re('00 40 00 00 00 63 00 00 00 68 00 00 00 61 00 00 00'
 #               '72 00 00 00 73 00 00 00 65 00 00 00 74 00 00 00 20'
 #               '00 00 00 22 00 00')
 #        + b'((\x00[^\x22]\x00\x00)*?)'
 #        + hex2re('00 22 00 00 00 3B 00 00')).match),
 
-    (4, (Slice[::4], '-LE'), re.compile(
+    ((Slice[::4], '-LE'), re.compile(
         hex2re('FF FE 00 00 40 00 00 00 63 00 00 00 68 00 00 00 61'
                '00 00 00 72 00 00 00 73 00 00 00 65 00 00 00 74 00'
                '00 00 20 00 00 00 22 00 00 00')
         + b'(([^\x22]\x00\x00\x00)*?)'
         + hex2re('22 00 00 00 3B 00 00 00')).match),
 
-    (0, (Slice[::4], '-LE'), re.compile(
+    ((Slice[::4], '-LE'), re.compile(
         hex2re('40 00 00 00 63 00 00 00 68 00 00 00 61 00 00 00 72'
                '00 00 00 73 00 00 00 65 00 00 00 74 00 00 00 20 00'
                '00 00 22 00 00 00')
         + b'(([^\x22]\x00\x00\x00)*?)'
         + hex2re('22 00 00 00 3B 00 00 00')).match),
 
-    (4, 'UTF-32-BE', re.compile(
+    ('UTF-32-BE', re.compile(
         hex2re('00 00 FE FF')).match),
 
-    (4, 'UTF-32-LE', re.compile(
+    ('UTF-32-LE', re.compile(
         hex2re('FF FE 00 00')).match),
 
-#    (4, 'UTF-32-2143', re.compile(
+#    ('UTF-32-2143', re.compile(
 #        hex2re('00 00 FF FE')).match),
 
-#    (4, 'UTF-32-3412', re.compile(
+#    ('UTF-32-3412', re.compile(
 #        hex2re('FE FF 00 00')).match),
 
-    (2, 'UTF-16-BE', re.compile(
+    ('UTF-16-BE', re.compile(
         hex2re('FE FF')).match),
 
-    (2, 'UTF-16-LE', re.compile(
+    ('UTF-16-LE', re.compile(
         hex2re('FF FE')).match),
 
 
@@ -221,19 +221,19 @@ ENCODING_MAGIC_NUMBERS = [
 # You know the story with patches ...
 
 #    # as specified, transcoded from EBCDIC to ASCII
-#    (0, 'as_specified-EBCDIC', re.compile(
+#    ('as_specified-EBCDIC', re.compile(
 #        hex2re('7C 83 88 81 99 A2 85 A3 40 7F')
 #        + b'([^\x7F]*?)'
 #        + hex2re('7F 5E')).match),
 
 #    # as specified, transcoded from IBM1026 to ASCII
-#    (0, 'as_specified-IBM1026', re.compile(
+#    ('as_specified-IBM1026', re.compile(
 #        hex2re('AE 83 88 81 99 A2 85 A3 40 FC')
 #        + b'([^\xFC]*?)'
 #        + hex2re('FC 5E')).match),
 
 #    # as specified, transcoded from GSM 03.38 to ASCII
-#    (0, 'as_specified-GSM_03.38', re.compile(
+#    ('as_specified-GSM_03.38', re.compile(
 #        hex2re('00 63 68 61 72 73 65 74 20 22')
 #        + b'([^\x22]*?)'
 #        + hex2re('22 3B')).match),

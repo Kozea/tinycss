@@ -70,8 +70,9 @@ foo(int x) {\
     ('"Lorem\\\nIpsum"', [('STRING', 'LoremIpsum')]),
 
     # backslash followed by a newline outside a string: stands for itself
-    ('Lorem\\\nIpsum',
-        [('IDENT', 'Lorem'), ('DELIM', '\\'), ('S', '\n'), ('IDENT', 'Ipsum')]),
+    ('Lorem\\\nIpsum', [
+        ('IDENT', 'Lorem'), ('DELIM', '\\'),
+        ('S', '\n'), ('IDENT', 'Ipsum')]),
 
     # Cancel the meaning of special characters
     (r'"Lore\m Ipsum"', [('STRING', 'Lorem Ipsum')]),  # or not specal
@@ -117,6 +118,7 @@ def test_tokens(tokenize, css_source, expected_tokens):
         for token in tokens
     ]
     assert result == expected_tokens
+
 
 @pytest.mark.parametrize('tokenize', [
     python_tokenize_flat, cython_tokenize_flat])

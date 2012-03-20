@@ -68,7 +68,7 @@ def parse_color(token):
         args = parse_comma_separated(token.content)
         if args:
             name = token.function_name.lower()
-            if name ==  'rgb':
+            if name == 'rgb':
                 return parse_rgb(args, alpha=1.)
             elif name == 'rgba':
                 alpha = parse_alpha(args[3:])
@@ -102,7 +102,7 @@ def parse_rgb(args, alpha):
     if types == ['INTEGER', 'INTEGER', 'INTEGER']:
         r, g, b = [arg.value / 255 for arg in args[:3]]
         return r, g, b, alpha
-    elif types == ['PERCENTAGE', 'PERCENTAGE','PERCENTAGE']:
+    elif types == ['PERCENTAGE', 'PERCENTAGE', 'PERCENTAGE']:
         r, g, b = [arg.value / 100 for arg in args[:3]]
         return r, g, b, alpha
 
@@ -133,11 +133,16 @@ def hsl_to_rgb(hue, saturation, lightness):
 
     # Translated from ABC: http://www.w3.org/TR/css3-color/#hsl-color
     def hue_to_rgb(m1, m2, h):
-        if h < 0: h += 1
-        if h > 1: h -= 1
-        if h * 6 < 1: return m1 + (m2 - m1) * h * 6
-        if h * 2 < 1: return m2
-        if h * 3 < 2: return m1 + (m2 - m1) * (2/3 - h) * 6
+        if h < 0:
+            h += 1
+        if h > 1:
+            h -= 1
+        if h * 6 < 1:
+            return m1 + (m2 - m1) * h * 6
+        if h * 2 < 1:
+            return m2
+        if h * 3 < 2:
+            return m1 + (m2 - m1) * (2 / 3 - h) * 6
         return m1
 
     if lightness <= 0.5:
@@ -146,9 +151,9 @@ def hsl_to_rgb(hue, saturation, lightness):
         m2 = lightness + saturation - lightness * saturation
     m1 = lightness * 2 - m2
     return (
-        hue_to_rgb(m1, m2, hue + 1/3),
+        hue_to_rgb(m1, m2, hue + 1 / 3),
         hue_to_rgb(m1, m2, hue),
-        hue_to_rgb(m1, m2, hue - 1/3),
+        hue_to_rgb(m1, m2, hue - 1 / 3),
     )
 
 

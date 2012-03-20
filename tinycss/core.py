@@ -97,7 +97,7 @@ class AtRule(object):
         self.head = head
         self.body = body
         self.line = line
-        self.column  = column
+        self.column = column
 
     def __repr__(self):  # pragma: no cover
         return ('<{0.__class__.__name__} {0.line}:{0.column} {0.at_keyword}>'
@@ -141,7 +141,7 @@ class RuleSet(object):
         self.selector = selector
         self.declarations = declarations
         self.line = line
-        self.column  = column
+        self.column = column
 
     def __repr__(self):  # pragma: no cover
         return ('<{0.__class__.__name__} at {0.line}:{0.column}'
@@ -180,7 +180,7 @@ class Declaration(object):
         self.name = name
         self.value = value
         self.line = line
-        self.column  = column
+        self.column = column
 
     def __repr__(self):  # pragma: no cover
         return ('<{0.__class__.__name__} {0.line}:{0.column}'
@@ -245,7 +245,6 @@ class CoreParser(object):
                              linking_encoding, document_encoding)
         return self.parse_stylesheet(css_unicode)
 
-
     def parse_stylesheet(self, css_unicode):
         """Parse a stylesheet from an Unicode string.
 
@@ -260,7 +259,6 @@ class CoreParser(object):
         statements = self.parse_statements(
             tokens, errors, context='stylesheet')
         return Stylesheet(statements, errors)
-
 
     def parse_style_attr(self, css_source):
         """Parse a "style" attribute (eg. of an HTML element).
@@ -309,7 +307,6 @@ class CoreParser(object):
                     # Skip the entire rule
         return rules
 
-
     def parse_at_rule(self, rule, previous_rules, errors, context):
         """Parse an at-rule.
 
@@ -355,7 +352,6 @@ class CoreParser(object):
             raise ParseError(rule, 'unknown at-rule in {0} context: {1}'
                 .format(context, rule.at_keyword))
 
-
     def read_at_rule(self, at_keyword_token, tokens):
         """Read an at-rule.
 
@@ -397,7 +393,6 @@ class CoreParser(object):
                 head.append(token)
         raise ParseError(token, 'incomplete at-rule')
 
-
     def parse_ruleset(self, first_token, tokens):
         """Parse a ruleset: a selector followed by declaration block.
 
@@ -438,7 +433,6 @@ class CoreParser(object):
                 selector_parts.append(token)
         raise ParseError(token, 'no declaration block found for ruleset')
 
-
     def parse_declaration_list(self, tokens):
         """Parse a ';' separated declaration list.
 
@@ -478,7 +472,6 @@ class CoreParser(object):
                 errors.append(exc)
                 # Skip the entire declaration
         return declarations, errors
-
 
     def parse_declaration(self, tokens):
         """Parse a single declaration.
@@ -523,7 +516,6 @@ class CoreParser(object):
         return Declaration(
             property_name, value, name_token.line, name_token.column)
 
-
     def parse_value(self, tokens):
         """Parse a property value and return a list of tokens.
 
@@ -553,7 +545,6 @@ class CoreParser(object):
             content.pop()
         return content
 
-
     def validate_block(self, tokens, context):
         """
         :raises:
@@ -569,7 +560,6 @@ class CoreParser(object):
                 self.validate_block(token.content, context)
             elif type_ not in (';', 'ATKEYWORD'):
                 self.validate_any(token, context)
-
 
     def validate_any(self, token, context):
         """

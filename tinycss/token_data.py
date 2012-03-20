@@ -114,6 +114,7 @@ COMPILED_MACROS = {}
 COMPILED_TOKEN_REGEXPS = []  # [(name, regexp.match)]  ordered
 COMPILED_TOKEN_INDEXES = {}  # {name: i}  helper for the C speedups
 
+
 def _init():
     """Import-time initialization."""
     COMPILED_MACROS.clear()
@@ -154,6 +155,7 @@ except NameError:  # pragma: no cover
     # Python 3
     unichr = chr
     unicode = str
+
 
 def _unicode_replace(match, int=int, unichr=unichr, maxunicode=sys.maxunicode):
     codepoint = int(match.group(1), 16)
@@ -283,7 +285,6 @@ class ContainerToken(object):
         parts.append(self.css_end)
         return ''.join(parts)
 
-
     format_string = '<ContainerToken {0.type} at {0.line}:{0.column}>'
 
     def __repr__(self):  # pragma: no cover
@@ -315,4 +316,5 @@ class FunctionToken(ContainerToken):
         # Remove the ( marker:
         self.function_name = function_name[:-1]
 
-    format_string = '<FunctionToken {0.function_name}() at {0.line}:{0.column}>'
+    format_string = ('<FunctionToken {0.function_name}() at '
+                     '{0.line}:{0.column}>')

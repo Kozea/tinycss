@@ -60,7 +60,7 @@ class PageRule(object):
         self.declarations = declarations
         self.at_rules = at_rules
         self.line = line
-        self.column  = column
+        self.column = column
 
 
 class MediaRule(object):
@@ -89,7 +89,7 @@ class MediaRule(object):
         self.media = media
         self.statements = statements
         self.line = line
-        self.column  = column
+        self.column = column
 
 
 class ImportRule(object):
@@ -121,7 +121,7 @@ class ImportRule(object):
         self.uri = uri
         self.media = media
         self.line = line
-        self.column  = column
+        self.column = column
 
 
 class CSS21Parser(CoreParser):
@@ -194,7 +194,6 @@ class CSS21Parser(CoreParser):
         return super(CSS21Parser, self).parse_at_rule(
             rule, previous_rules, errors, context)
 
-
     def require_at_rule_body(self, rule):
         """Check that the given at-rule has a body.
 
@@ -208,7 +207,6 @@ class CSS21Parser(CoreParser):
         if not rule.body:
             raise ParseError(rule,
                 'invalid {0} rule: missing block'.format(rule.at_keyword))
-
 
     def parse_media(self, tokens):
         """For CSS 2.1, parse a list of media types.
@@ -245,7 +243,6 @@ class CSS21Parser(CoreParser):
                 if token.type != 'S':
                     break
 
-
     def parse_page_selector(self, head):
         """Parse an @page selector.
 
@@ -264,7 +261,6 @@ class CSS21Parser(CoreParser):
                     'first', 'left', 'right')):
             return head[1].value
         raise ParseError(head[0], 'invalid @page selector')
-
 
     def parse_page_block(self, body, errors):
         """Parse the body of an @page rule.
@@ -307,14 +303,12 @@ class CSS21Parser(CoreParser):
                         errors.append(err)
         return declarations, at_rules
 
-
     def parse_declaration(self, *args, **kwargs):
         decl = super(CSS21Parser, self).parse_declaration(*args, **kwargs)
         value = decl.value
         value.content, priority = self.parse_value_priority(value)
         return PropertyDeclaration(
             decl.name, value, priority, decl.line, decl.column)
-
 
     def parse_value_priority(self, container):
         """Take a VALUE ContainerToken from the core parser and
