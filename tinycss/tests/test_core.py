@@ -14,7 +14,7 @@ import pytest
 from tinycss.core import CoreParser
 
 from .test_tokenizer import jsonify
-
+from . import assert_errors
 
 
 class TestParser(CoreParser):
@@ -36,9 +36,7 @@ class TestParser(CoreParser):
 def test_at_rules(css_source, expected_rules, expected_errors):
     # Not using TestParser here:
     stylesheet = CoreParser().parse_stylesheet(css_source)
-    assert len(stylesheet.errors) == len(expected_errors)
-    for error, expected in zip(stylesheet.errors, expected_errors):
-        assert expected in error.message
+    assert_errors(stylesheet.errors, expected_errors)
     result = len(stylesheet.statements)
     assert result == expected_rules
 
@@ -97,9 +95,7 @@ def test_at_rules(css_source, expected_rules, expected_errors):
 ])
 def test_parse_stylesheet(css_source, expected_rules, expected_errors):
     stylesheet = TestParser().parse_stylesheet(css_source)
-    assert len(stylesheet.errors) == len(expected_errors)
-    for error, expected in zip(stylesheet.errors, expected_errors):
-        assert expected in error.message
+    assert_errors(stylesheet.errors, expected_errors)
     result = [
         (rule.at_keyword, list(jsonify(rule.head)),
             list(jsonify(rule.body.content)) if rule.body else None)
@@ -147,9 +143,7 @@ def test_parse_stylesheet(css_source, expected_rules, expected_errors):
 ])
 def test_parse_style_attr(css_source, expected_declarations, expected_errors):
     declarations, errors = TestParser().parse_style_attr(css_source)
-    assert len(errors) == len(expected_errors)
-    for error, expected in zip(errors, expected_errors):
-        assert expected in error.message
+    assert_errors(errors, expected_errors)
     result = [(decl.name, list(jsonify(decl.value.content)))
               for decl in declarations]
     assert result == expected_declarations

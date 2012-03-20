@@ -14,6 +14,7 @@ import pytest
 from tinycss.css21 import CSS21Parser
 
 from .test_tokenizer import jsonify
+from . import assert_errors
 
 
 @pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [
@@ -37,9 +38,7 @@ from .test_tokenizer import jsonify
 ])
 def test_at_import(css_source, expected_rules, expected_errors):
     stylesheet = CSS21Parser().parse_stylesheet(css_source)
-    assert len(stylesheet.errors) == len(expected_errors)
-    for error, expected in zip(stylesheet.errors, expected_errors):
-        assert expected in error.message
+    assert_errors(stylesheet.errors, expected_errors)
 
     result = [
         (rule.uri, rule.media)
@@ -75,9 +74,7 @@ def test_at_import(css_source, expected_rules, expected_errors):
 ])
 def test_at_page(css_source, expected_rules, expected_errors):
     stylesheet = CSS21Parser().parse_stylesheet(css_source)
-    assert len(stylesheet.errors) == len(expected_errors)
-    for error, expected in zip(stylesheet.errors, expected_errors):
-        assert expected in error.message
+    assert_errors(stylesheet.errors, expected_errors)
 
     for rule in stylesheet.statements:
         assert rule.at_keyword == '@page'
@@ -111,9 +108,7 @@ def test_at_page(css_source, expected_rules, expected_errors):
 ])
 def test_at_media(css_source, expected_rules, expected_errors):
     stylesheet = CSS21Parser().parse_stylesheet(css_source)
-    assert len(stylesheet.errors) == len(expected_errors)
-    for error, expected in zip(stylesheet.errors, expected_errors):
-        assert expected in error.message
+    assert_errors(stylesheet.errors, expected_errors)
 
     for rule in stylesheet.statements:
         assert rule.at_keyword == '@media'
@@ -156,9 +151,7 @@ def test_at_media(css_source, expected_rules, expected_errors):
 ])
 def test_important(css_source, expected_declarations, expected_errors):
     declarations, errors = CSS21Parser().parse_style_attr(css_source)
-    assert len(errors) == len(expected_errors)
-    for error, expected in zip(errors, expected_errors):
-        assert expected in error.message
+    assert_errors(errors, expected_errors)
     result = [(decl.name, list(jsonify(decl.value.content)), decl.priority)
               for decl in declarations]
     assert result == expected_declarations

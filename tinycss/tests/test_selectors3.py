@@ -12,13 +12,16 @@ from __future__ import unicode_literals
 import os
 
 import pytest
+
+from tinycss.core import CoreParser
+from . import assert_errors
+
 try:
     import lxml.cssselect
 except ImportError:  # pragma: no cover
     LXML_INSTALLED = False
 else:
     LXML_INSTALLED = True
-    from tinycss.core import CoreParser
     from tinycss.selectors3 import (
         Selector, InvalidSelectorError, Selectors3ParserMixin,
         parse_selector_string, parse_selector_group_string)
@@ -48,9 +51,7 @@ def test_parser(css_source, expected_num_selectors, expected_errors):
     if not LXML_INSTALLED:  # pragma: no cover
         pytest.skip('lxml not available')
     stylesheet = CSSParser().parse_stylesheet(css_source)
-    assert len(stylesheet.errors) == len(expected_errors)
-    for error, expected in zip(stylesheet.errors, expected_errors):
-        assert expected in error.message
+    assert_errors(stylesheet.errors, expected_errors)
 
     result = []
     for rule in stylesheet.statements:
