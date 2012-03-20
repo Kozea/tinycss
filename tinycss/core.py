@@ -13,6 +13,7 @@
 from __future__ import unicode_literals
 from itertools import chain
 
+from .decoding import decode
 from .tokenizer import tokenize_grouped
 from .token_data import ContainerToken
 
@@ -217,16 +218,44 @@ class CoreParser(object):
 
     # User API:
 
-    def parse_stylesheet(self, css_source):
-        """Parse a stylesheet.
+    def parse_stylesheet_bytes(self, css_bytes, protocol_encoding=None,
+                               linking_encoding=None, document_encoding=None):
+        """Parse a stylesheet from a byte string.
 
-        :param css_source:
+        The character encoding is determined from the passed metadata and the
+        ``@charset`` rule in the stylesheet (if any).
+
+        :param css_bytes:
+            A CSS stylesheet as a byte string.
+        :param protocol_encoding:
+            The "charset" parameter of a "Content-Type" HTTP header (if any),
+            or similar metadata for other protocols.
+        :param linking_encoding:
+            ``<link charset="">`` or other metadata from the linking mechanism
+            (if any)
+        :param document_encoding:
+            Encoding of the referring style sheet or document (if any)
+        :raises:
+            :class:`UnicodeDecodeError` if decoding failed
+        :return:
+            A :class:`Stylesheet`.
+
+        """
+        css_unicode = decode(css_bytes, protocol_encoding,
+                             linking_encoding, document_encoding)
+        return self.parse_stylesheet(css_unicode)
+
+
+    def parse_stylesheet(self, css_unicode):
+        """Parse a stylesheet from an Unicode string.
+
+        :param css_unicode:
             A CSS stylesheet as an unicode string.
         :return:
             A :class:`Stylesheet`.
 
         """
-        tokens = tokenize_grouped(css_source)
+        tokens = tokenize_grouped(css_unicode)
         errors = []
         statements = self.parse_statements(
             tokens, errors, context='stylesheet')

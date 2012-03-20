@@ -20,7 +20,34 @@ from . import assert_errors
 class TestParser(CoreParser):
     """A parser that always accepts unparsed at-rules."""
     def parse_at_rule(self, rule, stylesheet_rules, errors, context):
-        return rule
+        if rule.at_keyword == '@charset':
+            return super(TestParser, self).parse_at_rule(
+                rule, stylesheet_rules, errors, context)
+        else:
+            return rule
+
+
+@pytest.mark.parametrize(('css_bytes', 'kwargs', 'expected_result'), [
+    ('@import "é";'.encode('utf8'), {}, 'é'),
+    ('@import "é";'.encode('utf16'), {}, 'é'),  # with a BOM
+    ('@import "é";'.encode('latin1'), {}, None),
+    ('@charset "latin1";@import "é";'.encode('latin1'), {}, 'é'),
+    ('@import "é";'.encode('latin1'), {'document_encoding': 'latin1'}, 'é'),
+    ('@import "é";'.encode('latin1'), {'document_encoding': 'utf8'}, None),
+    # Mojibake yay!
+    ('@import "é";'.encode('utf8'), {'document_encoding': 'latin1'}, 'Ã©'),
+])
+def test_bytes(css_bytes, kwargs, expected_result):
+    try:
+        stylesheet = TestParser().parse_stylesheet_bytes(css_bytes, **kwargs)
+    except UnicodeDecodeError:
+        result = None
+    else:
+        assert stylesheet.statements[0].at_keyword == '@import'
+        head = stylesheet.statements[0].head
+        assert head[0].type == 'STRING'
+        result = head[0].value
+    assert result == expected_result
 
 
 @pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [

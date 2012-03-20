@@ -23,6 +23,9 @@ __all__ = ['decode']  # Everything else is implementation detail
 def decode(css_bytes, protocol_encoding=None,
            linking_encoding=None, document_encoding=None):
     """
+    Determine the character encoding from the passed metadata and the
+    ``@charset`` rule in the stylesheet (if any); and decode accordingly.
+
     :param css_bytes:
         a CSS stylesheet as a byte string
     :param protocol_encoding:
