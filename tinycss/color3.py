@@ -9,7 +9,7 @@
     This module does not provide anything that integrates in a parser class,
     only functions that parse single tokens from (eg.) a property value.
 
-    :copyright: (c) 2010 by Simon Sapin.
+    :copyright: (c) 2012 by Simon Sapin.
     :license: BSD, see LICENSE for more details.
 """
 

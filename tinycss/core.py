@@ -6,7 +6,7 @@
     Simple recursive-descent parser for the CSS core syntax:
     http://www.w3.org/TR/CSS21/syndata.html#tokenization
 
-    :copyright: (c) 2010 by Simon Sapin.
+    :copyright: (c) 2012 by Simon Sapin.
     :license: BSD, see LICENSE for more details.
 """
 

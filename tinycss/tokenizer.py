@@ -8,7 +8,7 @@
 
     This is the pure-python implementation. See also speedups.pyx
 
-    :copyright: (c) 2010 by Simon Sapin.
+    :copyright: (c) 2012 by Simon Sapin.
     :license: BSD, see LICENSE for more details.
 """
 

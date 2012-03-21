@@ -5,7 +5,7 @@
 
     Shared data for both implementations (Cython and Python) of the tokenizer.
 
-    :copyright: (c) 2010 by Simon Sapin.
+    :copyright: (c) 2012 by Simon Sapin.
     :license: BSD, see LICENSE for more details.
 """
 

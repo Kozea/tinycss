@@ -5,7 +5,7 @@
 
     A CSS parser, and nothing else.
 
-    :copyright: (c) 2010 by Simon Sapin.
+    :copyright: (c) 2012 by Simon Sapin.
     :license: BSD, see LICENSE for more details.
 """
 
