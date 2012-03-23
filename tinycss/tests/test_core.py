@@ -32,9 +32,14 @@ class TestParser(CoreParser):
     ('@import "é";'.encode('utf16'), {}, 'é'),  # with a BOM
     ('@import "é";'.encode('latin1'), {}, None),
     ('@charset "latin1";@import "é";'.encode('latin1'), {}, 'é'),
+    (' @charset "latin1";@import "é";'.encode('latin1'), {}, None),
     ('@import "é";'.encode('latin1'), {'document_encoding': 'latin1'}, 'é'),
     ('@import "é";'.encode('latin1'), {'document_encoding': 'utf8'}, None),
+    ('@charset "utf8"; @import "é";'.encode('utf8'),
+        {'document_encoding': 'latin1'}, 'é'),
     # Mojibake yay!
+    (' @charset "utf8"; @import "é";'.encode('utf8'),
+        {'document_encoding': 'latin1'}, 'Ã©'),
     ('@import "é";'.encode('utf8'), {'document_encoding': 'latin1'}, 'Ã©'),
 ])
 def test_bytes(css_bytes, kwargs, expected_result):
@@ -56,13 +61,14 @@ def test_bytes(css_bytes, kwargs, expected_result):
     ('foo{} @page{} bar{}', 2,
         ['unknown at-rule in stylesheet context: @page']),
     ('@charset "ascii"; foo {}', 1, []),
-    (' @charset "ascii"; foo {}', 1, ['@charset rule not at the beginning']),
-    ('@charset ascii; foo {}', 1, ['invalid @charset']),
-    ('foo {} @charset "ascii";', 1, ['@charset rule not at the beginning']),
+    (' @charset "ascii"; foo {}', 1, ['mis-placed or malformed @charset rule']),
+    ('@charset ascii; foo {}', 1, ['mis-placed or malformed @charset rule']),
+    ('foo {} @charset "ascii";', 1, ['mis-placed or malformed @charset rule']),
 ])
 def test_at_rules(css_source, expected_rules, expected_errors):
+    # Pass 'encoding' to allow @charset
     # Not using TestParser here:
-    stylesheet = CoreParser().parse_stylesheet(css_source)
+    stylesheet = CoreParser().parse_stylesheet(css_source, encoding='utf8')
     assert_errors(stylesheet.errors, expected_errors)
     result = len(stylesheet.statements)
     assert result == expected_rules

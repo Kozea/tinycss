@@ -29,6 +29,8 @@ def params(css, encoding, use_bom=False, expect_error=False, **kwargs):
     params('é', 'latin1', document_encoding='ISO-8859-1'),
     params('é', 'latin1', protocol_encoding='utf8',
                           document_encoding='latin1'),
+    params('@charset "utf8"; é', 'latin1', expect_error=True),
+    params('@charset "uùùùùtf8"; é', 'latin1', expect_error=True),
     params('@charset "utf8"; é', 'latin1', document_encoding='latin1'),
     params('é', 'latin1', linking_encoding='utf8',
                           document_encoding='latin1'),
@@ -65,7 +67,7 @@ def test_decode(css, encoding, use_bom, expect_error, kwargs):
         source = css
     css_bytes = source.encode(encoding)
     try:
-        result = decode(css_bytes, **kwargs)
+        result, result_encoding = decode(css_bytes, **kwargs)
     except UnicodeDecodeError as exc:
         result = exc
     if expect_error:

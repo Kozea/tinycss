@@ -289,8 +289,7 @@ class CSS21Parser(CoreParser):
                     rule = self.read_at_rule(token, tokens)
                     result = self.parse_at_rule(
                         rule, at_rules, errors, '@page')
-                    if result:
-                        at_rules.append(result)
+                    at_rules.append(result)
                 except ParseError as err:
                     errors.append(err)
             elif token.type != 'S':

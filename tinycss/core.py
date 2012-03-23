@@ -11,7 +11,7 @@
 """
 
 from __future__ import unicode_literals
-from itertools import chain
+from itertools import chain, islice
 
 from .decoding import decode
 from .tokenizer import tokenize_grouped
@@ -46,10 +46,15 @@ class Stylesheet(object):
     .. attribute:: errors
         a list of :class:`ParseError`
 
+    .. attribute:: encoding
+        The character encoding used to decode the stylesheet from bytes,
+        or ``None`` for Unicode stylesheets.
+
     """
-    def __init__(self, statements, errors):
+    def __init__(self, statements, errors, encoding):
         self.statements = statements
         self.errors = errors
+        self.encoding = encoding
 
     def __repr__(self):  # pragma: no cover
         return '<{0.__class__.__name__} {1} rules {2} errors>'.format(
@@ -209,6 +214,26 @@ class ParseError(ValueError):
         return ('<{0.__class__.__name__}: {0.message}>'.format(self))
 
 
+def _remove_at_charset(tokens):
+    """Remove any valid @charset at the beggining of a token stream.
+
+    :param tokens:
+        An iterable of tokens
+    :returns:
+        A possibly truncated iterable of tokens
+
+    """
+    tokens = iter(tokens)
+    header = list(islice(tokens, 4))
+    if [t.type for t in header] == ['ATKEYWORD', 'S', 'STRING', ';']:
+        atkw, space, string, semicolon = header
+        if ((atkw.value, space.value) == ('@charset', ' ')
+                and string.as_css[0] == '"'):
+            # Found a valid @charset rule, only keep what’s after it.
+            return tokens
+    return chain(header, tokens)
+
+
 class CoreParser(object):
     """
     Currently the parser holds no state. It is only a class to allow
@@ -241,24 +266,29 @@ class CoreParser(object):
             A :class:`Stylesheet`.
 
         """
-        css_unicode = decode(css_bytes, protocol_encoding,
-                             linking_encoding, document_encoding)
-        return self.parse_stylesheet(css_unicode)
+        css_unicode, encoding = decode(css_bytes, protocol_encoding,
+                                       linking_encoding, document_encoding)
+        return self.parse_stylesheet(css_unicode, encoding=encoding)
 
-    def parse_stylesheet(self, css_unicode):
+    def parse_stylesheet(self, css_unicode, encoding=None):
         """Parse a stylesheet from an Unicode string.
 
         :param css_unicode:
             A CSS stylesheet as an unicode string.
+        :param encoding:
+            The character encoding used to decode the stylesheet from bytes,
+            if any.
         :return:
             A :class:`Stylesheet`.
 
         """
         tokens = tokenize_grouped(css_unicode)
+        if encoding:
+            tokens = _remove_at_charset(tokens)
         errors = []
         statements = self.parse_statements(
             tokens, errors, context='stylesheet')
-        return Stylesheet(statements, errors)
+        return Stylesheet(statements, errors, encoding)
 
     def parse_style_attr(self, css_source):
         """Parse a "style" attribute (eg. of an HTML element).
@@ -296,8 +326,7 @@ class CoreParser(object):
                         rule = self.read_at_rule(token, tokens)
                         result = self.parse_at_rule(
                             rule, rules, errors, context)
-                        if result:
-                            rules.append(result)
+                        rules.append(result)
                     else:
                         rule, rule_errors = self.parse_ruleset(token, tokens)
                         rules.append(rule)
@@ -335,22 +364,10 @@ class CoreParser(object):
 
         """
         if rule.at_keyword == '@charset':
-            # (1, 1) assumes that the byte order mark (BOM), if any,
-            # was removed when decoding bytes to Unicode.
-            # This also implies context == 'stylesheet':
-            if (rule.line, rule.column) == (1, 1):
-                if not (len(rule.head) == 1 and rule.head[0].type == 'STRING'
-                        and rule.head[0].as_css[0] == '"' and not rule.body):
-                    raise ParseError(rule, 'invalid @charset rule')
-            else:
-                raise ParseError(rule,
-                    '@charset rule not at the beginning of the stylesheet')
-            # The rule is valid, but ignored.
-            # (It should not appear in stylesheet.rules)
-            return False
+            raise ParseError(rule, 'mis-placed or malformed @charset rule')
         else:
             raise ParseError(rule, 'unknown at-rule in {0} context: {1}'
-                .format(context, rule.at_keyword))
+                                    .format(context, rule.at_keyword))
 
     def read_at_rule(self, at_keyword_token, tokens):
         """Read an at-rule.

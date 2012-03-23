@@ -39,13 +39,14 @@ def decode(css_bytes, protocol_encoding=None,
     :raises:
         :class:`UnicodeDecodeError` if decoding failed
     :return:
-        Unicode string, with any BOM removed
+        A tuple of an Unicode string, with any BOM removed, and the
+        encoding that was used.
 
     """
     if protocol_encoding:
         css_unicode = try_encoding(css_bytes, protocol_encoding)
         if css_unicode is not None:
-            return css_unicode
+            return css_unicode, protocol_encoding
     for encoding, pattern in ENCODING_MAGIC_NUMBERS:
         match = pattern(css_bytes)
         if match:
@@ -59,14 +60,14 @@ def decode(css_bytes, protocol_encoding=None,
             css_unicode = try_encoding(css_bytes, encoding)
             if css_unicode and not (has_at_charset and not
                                     css_unicode.startswith('@charset "')):
-                return css_unicode
+                return css_unicode, encoding
             break
     for encoding in [linking_encoding, document_encoding]:
         if encoding:
             css_unicode = try_encoding(css_bytes, encoding)
             if css_unicode is not None:
-                return css_unicode
-    return try_encoding(css_bytes, 'utf8', fallback=False)
+                return css_unicode, encoding
+    return try_encoding(css_bytes, 'utf8', fallback=False), 'utf8'
 
 
 def try_encoding(css_bytes, encoding, fallback=True):

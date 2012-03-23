@@ -37,7 +37,8 @@ from . import assert_errors
         [], ["expected ';', got a block"]),
 ])
 def test_at_import(css_source, expected_rules, expected_errors):
-    stylesheet = CSS21Parser().parse_stylesheet(css_source)
+    # Pass 'encoding' to allow @charset
+    stylesheet = CSS21Parser().parse_stylesheet(css_source, encoding='utf8')
     assert_errors(stylesheet.errors, expected_errors)
 
     result = [
