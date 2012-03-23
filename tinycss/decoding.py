@@ -15,9 +15,18 @@ from __future__ import unicode_literals
 from binascii import unhexlify
 import operator
 import re
+import sys
 
 
 __all__ = ['decode']  # Everything else is implementation detail
+
+
+if sys.version_info[0] < 3:
+    def _unicode_to_native(string):
+        return string.encode('utf8')
+else:
+    def _unicode_to_native(string):
+        return string
 
 
 def decode(css_bytes, protocol_encoding=None,
@@ -53,10 +62,12 @@ def decode(css_bytes, protocol_encoding=None,
             has_at_charset = isinstance(encoding, tuple)
             if has_at_charset:
                 extract, endianness = encoding
-                encoding = extract(match.group(1)).decode('ascii', 'replace')
+                encoding = extract(match.group(1))
+                encoding = encoding.decode('ascii', 'replace')
                 if encoding.replace('-', '').replace('_', '').lower() in [
                         'utf16', 'utf32']:
                     encoding += endianness
+                encoding = _unicode_to_native(encoding)
             css_unicode = try_encoding(css_bytes, encoding)
             if css_unicode and not (has_at_charset and not
                                     css_unicode.startswith('@charset "')):
