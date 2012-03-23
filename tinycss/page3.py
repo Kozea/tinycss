@@ -1,0 +1,128 @@
+# coding: utf8
+"""
+    tinycss.page3
+    ------------------
+
+    Support for CSS 3 Paged Media syntax:
+    http://dev.w3.org/csswg/css3-page/
+
+    Adds support for named page selectors and margin rules.
+
+    :copyright: (c) 2012 by Simon Sapin.
+    :license: BSD, see LICENSE for more details.
+"""
+
+from __future__ import unicode_literals, division
+from .core import ParseError
+from .css21 import CSS21Parser
+
+
+class MarginRule(object):
+    """A parsed at-rule for margin box.
+
+    .. attribute:: at_keyword
+        One of the 16 at-keywords for margin boxes, eg. ``'@top-left'``
+
+    .. attribute:: declarations
+        A list of :class:`PropertyDeclaration`
+
+    .. attribute:: line
+        Source line where this was read.
+
+    .. attribute:: column
+        Source column where this was read.
+
+    """
+
+    def __init__(self, at_keyword, declarations, line, column):
+        self.at_keyword = at_keyword
+        self.declarations = declarations
+        self.line = line
+        self.column = column
+
+
+class CSSPage3Parser(CSS21Parser):
+    """Extend the parser for CSS 3 Paged Media syntax.
+
+    Compared to CSS 2.1, the ``selector`` and ``at_rules`` attributes of
+    :class:`PageRule` objects are modified:
+
+    ``selector``, instead of a single string, is a tuple of the page name
+    and the pseudo class. Each of these may be a ``None`` or a string.
+
+    ======================== ======================
+    CSS                      Parsed selector
+    ======================== ======================
+    ``@page {}``             ``(None, None)``.
+    ``@page :first {}``      ``(None, 'first')``.
+    ``@page table:right {}`` ``('table', 'right')``
+    ======================== ======================
+
+    ``at_rules`` is not always empty, it is a list of :class:`MarginRule`
+    objects.
+
+    """
+
+    PAGE_MARGIN_AT_KEYWORDS = [
+        '@top-left-corner',
+        '@top-left',
+        '@top-center',
+        '@top-right',
+        '@top-right-corner',
+        '@bottom-left-corner',
+        '@bottom-left',
+        '@bottom-center',
+        '@bottom-right',
+        '@bottom-right-corner',
+        '@left-top',
+        '@left-middle',
+        '@left-bottom',
+        '@right-top',
+        '@right-middle',
+        '@right-bottom',
+    ]
+
+    def parse_at_rule(self, rule, previous_rules, errors, context):
+        if rule.at_keyword in self.PAGE_MARGIN_AT_KEYWORDS:
+            if context != '@page':
+                raise ParseError(rule,
+                    '%s rule not allowed in %s' % (rule.at_keyword, context))
+            if rule.head:
+                raise ParseError(rule.head[0],
+                    'unexpected %s token in %s rule header'
+                    % (rule.head[0].type, rule.at_keyword))
+            declarations, body_errors = self.parse_declaration_list(
+                rule.body.content)
+            errors.extend(body_errors)
+            return MarginRule(rule.at_keyword, declarations,
+                              rule.line, rule.column)
+        return super(CSSPage3Parser, self).parse_at_rule(
+            rule, previous_rules, errors, context)
+
+    def parse_page_selector(self, head):
+        """Parse an @page selector.
+
+        :param head:
+            The ``head`` attribute of an unparsed :class:`AtRule`.
+        :returns:
+            A page selector. For CSS 2.1, this is 'first', 'left', 'right'
+            or None.
+        :raises:
+            :class:`ParseError` on invalid selectors
+
+        """
+        if not head:
+            return None, None
+        if head[0].type == 'IDENT':
+            name = head.pop(0).value
+            while head and head[0].type == 'S':
+                head.pop(0)
+            if not head:
+                return name, None
+        else:
+            name = None
+        if (len(head) == 2 and head[0].type == ':'
+                and head[1].type == 'IDENT' and head[1].value in (
+                    'first', 'left', 'right')):
+            return name, head[1].value
+        raise ParseError(head[0], 'invalid @page selector')

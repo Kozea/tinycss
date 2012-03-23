@@ -36,8 +36,10 @@ class PageRule(object):
         Always ``'@page'``
 
     .. attribute:: selector
-        The page selector, eg. ``'first'`` for ``@page :first {}``
-        or ``None`` for ``@page {}``
+        The page selector.
+        In CSS 2.1 this is either ``None`` (no selector), or the string
+        ``'first'``, ``'left'`` or ``'right'`` for the pseudo class
+        of the same name.
 
     .. attribute:: declarations
         A list of :class:`PropertyDeclaration`
@@ -47,10 +49,10 @@ class PageRule(object):
         Always empty for CSS 2.1.
 
     .. attribute:: line
-        Source line when this was read.
+        Source line where this was read.
 
     .. attribute:: column
-        Source column when this was read.
+        Source column where this was read.
 
     """
     at_keyword = '@page'
@@ -77,10 +79,10 @@ class MediaRule(object):
         The list rulesets and at-rules inside the @media block.
 
     .. attribute:: line
-        Source line when this was read.
+        Source line where this was read.
 
     .. attribute:: column
-        Source column when this was read.
+        Source column where this was read.
 
     """
     at_keyword = '@media'
@@ -109,10 +111,10 @@ class ImportRule(object):
         in the source.
 
     .. attribute:: line
-        Source line when this was read.
+        Source line where this was read.
 
     .. attribute:: column
-        Source column when this was read.
+        Source column where this was read.
 
     """
     at_keyword = '@import'
@@ -253,6 +255,7 @@ class CSS21Parser(CoreParser):
             or None.
         :raises:
             :class:`ParseError` on invalid selectors
+
         """
         if not head:
             return None

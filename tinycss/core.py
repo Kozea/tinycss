@@ -78,10 +78,10 @@ class AtRule(object):
         ends with ';'
 
     .. attribute:: line
-        Source line when this was read.
+        Source line where this was read.
 
     .. attribute:: column
-        Source column when this was read.
+        Source column where this was read.
 
     The head was validated against the core grammar but **not** the body,
     as the body might contain declarations. In case of an error in a
@@ -131,10 +131,10 @@ class RuleSet(object):
         :func:`parse_declaration_list`, in source order.
 
     .. attribute:: line
-        Source line when this was read.
+        Source line where this was read.
 
     .. attribute:: column
-        Source column when this was read.
+        Source column where this was read.
 
     """
     def __init__(self, selector, declarations, line, column):
@@ -170,10 +170,10 @@ class Declaration(object):
         :func:`parse_value`.
 
     .. attribute:: line
-        Source line when this was read.
+        Source line where this was read.
 
     .. attribute:: column
-        Source column when this was read.
+        Source column where this was read.
 
     """
     def __init__(self, name, value, line, column):
