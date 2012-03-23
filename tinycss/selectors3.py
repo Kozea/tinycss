@@ -18,6 +18,7 @@ from __future__ import unicode_literals, division
 from .tokenizer import tokenize_grouped
 from .parsing import split_on_comma
 from .core import ParseError
+from .css21 import CSS21Parser
 
 try:
     from lxml import cssselect
@@ -200,23 +201,14 @@ def _calculate_specificity(parsed_selector):
         return a1 + a2, b1 + b2, c1 + c2
 
 
-class Selectors3ParserMixin(object):
+class CSSSelectors3Parser(CSS21Parser):
     """Adds a ``selector_list`` attribute to the :class:`RuleSet` objects
     returned by a parser. The attribute is a list of :class:`Selector`
     for this ruleset,.as returned by :func:`parse_selector3`
 
-    This class can not be used directly. It should be "mixed" in a parser
-    class with multiple inheritance::
-
-        class MyParser(Selectors3ParserMixin, CSS21Parser):
-            '''A custom parser with CSS 2.1 and Selectors 3'''
-
-    Note that it should be *before* the "real" parser in the list of base
-    classes.
-
     """
     def parse_ruleset(self, first_token, tokens):
-        ruleset, errors = super(Selectors3ParserMixin, self).parse_ruleset(
+        ruleset, errors = super(CSSSelectors3Parser, self).parse_ruleset(
             first_token, tokens)
         try:
             ruleset.selector_list = _parse_selector_group_tokens(

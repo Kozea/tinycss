@@ -23,11 +23,8 @@ except ImportError:  # pragma: no cover
 else:
     LXML_INSTALLED = True
     from tinycss.selectors3 import (
-        Selector, InvalidSelectorError, Selectors3ParserMixin,
+        Selector, InvalidSelectorError, CSSSelectors3Parser,
         parse_selector_string, parse_selector_group_string)
-
-    class CSSParser(Selectors3ParserMixin, CoreParser):
-        """Custom CSS parser."""
 
 
 def test_lxml():
@@ -50,7 +47,7 @@ def test_lxml():
 def test_parser(css_source, expected_num_selectors, expected_errors):
     if not LXML_INSTALLED:  # pragma: no cover
         pytest.skip('lxml not available')
-    stylesheet = CSSParser().parse_stylesheet(css_source)
+    stylesheet = CSSSelectors3Parser().parse_stylesheet(css_source)
     assert_errors(stylesheet.errors, expected_errors)
 
     result = []
