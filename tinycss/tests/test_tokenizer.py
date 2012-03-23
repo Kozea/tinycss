@@ -18,11 +18,12 @@ from tinycss.tokenizer import (
 
 
 def test_speedups():
-    if not os.environ.get('TINYCSS_SKIP_SPEEDUPS_TESTS'):
-        assert cython_tokenize_flat is not None, (
-            'Cython speedups are not installed, related tests will '
-            'be skipped. Set the TINYCSS_SKIP_SPEEDUPS_TESTS environment '
-            'variable if this is expected (eg. on PyPy).')
+    if os.environ.get('TINYCSS_SKIP_SPEEDUPS_TESTS'):  # pragma: no cover
+        return
+    assert cython_tokenize_flat is not None, (
+        'Cython speedups are not installed, related tests will '
+        'be skipped. Set the TINYCSS_SKIP_SPEEDUPS_TESTS environment '
+        'variable if this is expected (eg. on PyPy).')
 
 
 @pytest.mark.parametrize(('tokenize', 'css_source', 'expected_tokens'), [

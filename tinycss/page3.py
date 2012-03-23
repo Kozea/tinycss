@@ -53,8 +53,9 @@ class CSSPage3Parser(CSS21Parser):
     ======================== ======================
     CSS                      Parsed selector
     ======================== ======================
-    ``@page {}``             ``(None, None)``.
-    ``@page :first {}``      ``(None, 'first')``.
+    ``@page {}``             ``(None, None)``
+    ``@page :first {}``      ``(None, 'first')``
+    ``@page chapter {}``     ``('chapter', None)``
     ``@page table:right {}`` ``('table', 'right')``
     ======================== ======================
 

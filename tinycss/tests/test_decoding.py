@@ -24,6 +24,15 @@ def params(css, encoding, use_bom=False, expect_error=False, **kwargs):
                           'kwargs'), [
     params('𐂃', 'utf8'),
     params('é', 'latin1', expect_error=True),
+    params('é', 'latin1', protocol_encoding='ISO-8859-1'),
+    params('é', 'latin1', linking_encoding='ISO-8859-1'),
+    params('é', 'latin1', document_encoding='ISO-8859-1'),
+    params('é', 'latin1', protocol_encoding='utf8',
+                          document_encoding='latin1'),
+    params('@charset "utf8"; é', 'latin1', document_encoding='latin1'),
+    params('é', 'latin1', linking_encoding='utf8',
+                          document_encoding='latin1'),
+    params('@charset "utf-32"; 𐂃', 'utf-32-be'),
     params('@charset "ISO-8859-1"; é', 'latin1'),
     params('@charset "ISO-8859-8"; é', 'latin1', expect_error=True),
     params('𐂃', 'utf-16-le', expect_error=True),  # no BOM
@@ -37,6 +46,8 @@ def params(css, encoding, use_bom=False, expect_error=False, **kwargs):
     # protocol_encoding takes precedence over @charset
     params('@charset "ISO-8859-8"; é', 'latin1',
            protocol_encoding='ISO-8859-1'),
+    params('@charset "ISO-8859-1"; é', 'latin1',
+           protocol_encoding='utf8'),
     # @charset takes precedence over document_encoding
     params('@charset "ISO-8859-1"; é', 'latin1',
            document_encoding='ISO-8859-8'),
@@ -60,5 +71,4 @@ def test_decode(css, encoding, use_bom, expect_error, kwargs):
     if expect_error:
         assert result != css, 'Unexpected unicode success'
     else:
-        print(result, css, result == css, map(ord, result), map(ord, css))
         assert result == css, 'Unexpected unicode error'

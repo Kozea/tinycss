@@ -74,6 +74,11 @@ def test_selectors(css, expected_selector, expected_errors):
         [('foo', [('INTEGER', 4)]), ('bar', [('IDENT', 'z')])],
         [],
         ['unknown at-rule in @page context: @bottom-top']),
+
+    ('@page{} @top-right{}', [], [], [
+        '@top-right rule not allowed in stylesheet']),
+    ('@page{ @top-right 4 {} }', [], [], [
+        'unexpected INTEGER token in @top-right rule header']),
     # Not much error recovery tests here. This should be covered in test_css21
 ])
 def test_content(css, expected_declarations, expected_rules, expected_errors):
