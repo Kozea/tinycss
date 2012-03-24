@@ -63,6 +63,8 @@ def test_parser(css_source, expected_num_selectors, expected_errors):
     (' ', None),
     ('foo, ', None),
     ('foo> ', None),
+    ('input:enabled', None),  # not applicable in cssselect
+    ('*:first-of-type', None),  # not supported yet by cssselect
     ('* ', ((0, 0, 0, 0), None)),
     (' foo', ((0, 0, 0, 1), None)),
     (':empty ', ((0, 0, 1, 0), None)),

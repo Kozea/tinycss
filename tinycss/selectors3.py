@@ -167,8 +167,9 @@ def parse_selector_string(css_string):
 
     try:
         match = cssselect.CSSSelector(parsed_selector)
-    except cssselect.ExpressionError as exc:
-        raise InvalidSelectorError(exc.args[0])
+    except (cssselect.ExpressionError, NotImplementedError) as exc:
+        raise InvalidSelectorError(
+            exc.args[0] if exc.args else 'not implemented')
     return Selector(parsed_selector, pseudo_element, specificity, match)
 
 
