@@ -113,17 +113,23 @@ class CSSPage3Parser(CSS21Parser):
 
         """
         if not head:
-            return None, None
+            return (None, None), (0, 0, 0)
         if head[0].type == 'IDENT':
             name = head.pop(0).value
             while head and head[0].type == 'S':
                 head.pop(0)
             if not head:
-                return name, None
+                return (name, None), (1, 0, 0)
+            name_specificity = (1,)
         else:
             name = None
+            name_specificity = (0,)
         if (len(head) == 2 and head[0].type == ':'
-                and head[1].type == 'IDENT' and head[1].value in (
-                    'first', 'left', 'right')):
-            return name, head[1].value
+                and head[1].type == 'IDENT'):
+            pseudo_class = head[1].value
+            specificity = {
+                'first': (1, 0), 'left': (0, 1), 'right': (0, 1),
+            }.get(pseudo_class)
+            if specificity:
+                return (name, pseudo_class), (name_specificity + specificity)
         raise ParseError(head[0], 'invalid @page selector')

@@ -18,27 +18,29 @@ from .test_tokenizer import jsonify
 from . import assert_errors
 
 
-@pytest.mark.parametrize(('css', 'expected_selector','expected_errors'), [
-    ('@page {}', (None, None), []),
+@pytest.mark.parametrize(('css', 'expected_selector',
+                          'expected_specificity', 'expected_errors'), [
+    ('@page {}', (None, None), (0, 0, 0), []),
 
-    ('@page :first {}', (None, 'first'), []),
-    ('@page:left{}', (None, 'left'), []),
-    ('@page :right {}', (None, 'right'), []),
-    ('@page :last {}', None, ['invalid @page selector']),
-    ('@page : first {}', None, ['invalid @page selector']),
+    ('@page :first {}', (None, 'first'), (0, 1, 0), []),
+    ('@page:left{}', (None, 'left'), (0, 0, 1), []),
+    ('@page :right {}', (None, 'right'), (0, 0, 1), []),
+    ('@page :last {}', None, None, ['invalid @page selector']),
+    ('@page : first {}', None, None, ['invalid @page selector']),
 
-    ('@page foo:first {}', ('foo', 'first'), []),
-    ('@page bar :left {}', ('bar', 'left'), []),
-    (r'@page \26:right {}', ('&', 'right'), []),
+    ('@page foo:first {}', ('foo', 'first'), (1, 1, 0), []),
+    ('@page bar :left {}', ('bar', 'left'), (1, 0, 1), []),
+    (r'@page \26:right {}', ('&', 'right'), (1, 0, 1), []),
 
-    ('@page foo {}', ('foo', None), []),
-    (r'@page \26 {}', ('&', None), []),
+    ('@page foo {}', ('foo', None), (1, 0, 0), []),
+    (r'@page \26 {}', ('&', None), (1, 0, 0), []),
 
-    ('@page foo fist {}', None, ['invalid @page selector']),
-    ('@page foo, bar {}', None, ['invalid @page selector']),
-    ('@page foo&first {}', None, ['invalid @page selector']),
+    ('@page foo fist {}', None, None, ['invalid @page selector']),
+    ('@page foo, bar {}', None, None, ['invalid @page selector']),
+    ('@page foo&first {}', None, None, ['invalid @page selector']),
 ])
-def test_selectors(css, expected_selector, expected_errors):
+def test_selectors(css, expected_selector, expected_specificity,
+                   expected_errors):
     stylesheet = CSSPage3Parser().parse_stylesheet(css)
     assert_errors(stylesheet.errors, expected_errors)
 
@@ -47,6 +49,7 @@ def test_selectors(css, expected_selector, expected_errors):
         rule = stylesheet.statements[0]
         assert rule.at_keyword == '@page'
         selector = rule.selector
+        assert rule.specificity == expected_specificity
     else:
         selector = None
     assert selector == expected_selector

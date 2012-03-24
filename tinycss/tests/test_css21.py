@@ -49,44 +49,47 @@ def test_at_import(css_source, expected_rules, expected_errors):
     assert result == expected_rules
 
 
-@pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [
-    (' /* hey */\n', [], []),
-    ('@page {}', [(None, [])], []),
-    ('@page:first {}', [('first', [])], []),
-    ('@page :left{}', [('left', [])], []),
-    ('@page\t\n:right {}', [('right', [])], []),
-    ('@page :last {}', [], ['invalid @page selector']),
-    ('@page : right {}', [], ['invalid @page selector']),
-    ('@page table:left {}', [], ['invalid @page selector']),
+@pytest.mark.parametrize(('css', 'expected_result', 'expected_errors'), [
+    ('@page {}', (None, (0, 0), []), []),
+    ('@page:first {}', ('first', (1, 0), []), []),
+    ('@page :left{}', ('left', (0, 1), []), []),
+    ('@page\t\n:right {}', ('right', (0, 1), []), []),
+    ('@page :last {}', None, ['invalid @page selector']),
+    ('@page : right {}', None, ['invalid @page selector']),
+    ('@page table:left {}', None, ['invalid @page selector']),
 
-    ('@page;', [], ['invalid @page rule: missing block']),
+    ('@page;', None, ['invalid @page rule: missing block']),
     ('@page { a:1; ; b: 2 }',
-        [(None, [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])])],
+        (None, (0, 0), [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])]),
         []),
     ('@page { a:1; c: ; b: 2 }',
-        [(None, [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])])],
+        (None, (0, 0), [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])]),
         ['expected a property value']),
     ('@page { a:1; @top-left {} b: 2 }',
-        [(None, [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])])],
+        (None, (0, 0), [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])]),
         ['unknown at-rule in @page context: @top-left']),
     ('@page { a:1; @top-left {}; b: 2 }',
-        [(None, [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])])],
+        (None, (0, 0), [('a', [('INTEGER', 1)]), ('b', [('INTEGER', 2)])]),
         ['unknown at-rule in @page context: @top-left']),
 ])
-def test_at_page(css_source, expected_rules, expected_errors):
-    stylesheet = CSS21Parser().parse_stylesheet(css_source)
+def test_at_page(css, expected_result, expected_errors):
+    stylesheet = CSS21Parser().parse_stylesheet(css)
     assert_errors(stylesheet.errors, expected_errors)
 
-    for rule in stylesheet.statements:
+    if expected_result is None:
+        assert not stylesheet.statements
+    else:
+        assert len(stylesheet.statements) == 1
+        rule = stylesheet.statements[0]
         assert rule.at_keyword == '@page'
         assert rule.at_rules == []  # in CSS 2.1
-    result = [
-        (rule.selector, [
-            (decl.name, list(jsonify(decl.value.content)))
-            for decl in rule.declarations])
-        for rule in stylesheet.statements
-    ]
-    assert result == expected_rules
+        result = (
+            rule.selector,
+            rule.specificity,
+            [(decl.name, list(jsonify(decl.value.content)))
+                for decl in rule.declarations],
+        )
+        assert result == expected_result
 
 
 @pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [

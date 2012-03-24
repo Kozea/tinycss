@@ -41,6 +41,10 @@ class PageRule(object):
         ``'first'``, ``'left'`` or ``'right'`` for the pseudo class
         of the same name.
 
+    .. attribute:: specificity
+        Specificity of the page selector. This is a tuple of four integers,
+        but these tuples are mostly meant to be compared to each other.
+
     .. attribute:: declarations
         A list of :class:`PropertyDeclaration`
 
@@ -57,8 +61,10 @@ class PageRule(object):
     """
     at_keyword = '@page'
 
-    def __init__(self, selector, declarations, at_rules, line, column):
+    def __init__(self, selector, specificity, declarations, at_rules,
+                 line, column):
         self.selector = selector
+        self.specificity = specificity
         self.declarations = declarations
         self.at_rules = at_rules
         self.line = line
@@ -140,10 +146,10 @@ class CSS21Parser(CoreParser):
         if rule.at_keyword == '@page':
             if context != 'stylesheet':
                 raise ParseError(rule, '@page rule not allowed in ' + context)
-            selector = self.parse_page_selector(rule.head)
+            selector, specificity = self.parse_page_selector(rule.head)
             self.require_at_rule_body(rule)
             declarations, at_rules = self.parse_page_block(rule.body, errors)
-            return PageRule(selector, declarations, at_rules,
+            return PageRule(selector, specificity, declarations, at_rules,
                             rule.line, rule.column)
 
         elif rule.at_keyword == '@media':
@@ -258,11 +264,15 @@ class CSS21Parser(CoreParser):
 
         """
         if not head:
-            return None
+            return None, (0, 0)
         if (len(head) == 2 and head[0].type == ':'
-                and head[1].type == 'IDENT' and head[1].value in (
-                    'first', 'left', 'right')):
-            return head[1].value
+                and head[1].type == 'IDENT'):
+            pseudo_class = head[1].value
+            specificity = {
+                'first': (1, 0), 'left': (0, 1), 'right': (0, 1),
+            }.get(pseudo_class)
+            if specificity:
+                return pseudo_class, specificity
         raise ParseError(head[0], 'invalid @page selector')
 
     def parse_page_block(self, body, errors):
