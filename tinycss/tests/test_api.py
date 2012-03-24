@@ -33,6 +33,14 @@ def test_make_parser():
    )
     for enabled in itertools.product([True, False], repeat=len(classes)):
         kwargs = dict(zip(sorted(classes), enabled))
-        parser_class = make_parser(**kwargs)
+        parser = make_parser(**kwargs)
         for key, class_ in classes.items():
-            assert issubclass(parser_class, class_) == kwargs[key]
+            assert isinstance(parser, class_) == kwargs[key]
+
+    class MyParser(object):
+        def __init__(self, some_config):
+            self.some_config = some_config
+
+    parser = make_parser(MyParser, some_config=42)
+    assert isinstance(parser, MyParser)
+    assert parser.some_config == 42
