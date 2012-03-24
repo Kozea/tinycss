@@ -243,6 +243,38 @@ class CoreParser(object):
 
     # User API:
 
+    def parse_stylesheet_file(self, css_file, protocol_encoding=None,
+                              linking_encoding=None, document_encoding=None):
+        """Parse a stylesheet from a file or filename.
+
+        The character encoding is determined from the passed metadata and the
+        ``@charset`` rule in the stylesheet (if any).
+
+        :param css_file:
+            Either a file (any object with a :meth:`~file.read` method)
+            or a filename.
+        :param protocol_encoding:
+            The "charset" parameter of a "Content-Type" HTTP header (if any),
+            or similar metadata for other protocols.
+        :param linking_encoding:
+            ``<link charset="">`` or other metadata from the linking mechanism
+            (if any)
+        :param document_encoding:
+            Encoding of the referring style sheet or document (if any)
+        :raises:
+            :class:`UnicodeDecodeError` if decoding failed
+        :return:
+            A :class:`Stylesheet`.
+
+        """
+        if hasattr(css_file, 'read'):
+            css_bytes = css_file.read()
+        else:
+            with open(css_file, 'rb') as fd:
+                css_bytes = fd.read()
+        return self.parse_stylesheet_bytes(css_bytes, protocol_encoding,
+                                           linking_encoding, document_encoding)
+
     def parse_stylesheet_bytes(self, css_bytes, protocol_encoding=None,
                                linking_encoding=None, document_encoding=None):
         """Parse a stylesheet from a byte string.

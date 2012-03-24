@@ -21,10 +21,10 @@ import sys
 __all__ = ['decode']  # Everything else is implementation detail
 
 
-if sys.version_info[0] < 3:
+if sys.version_info[0] < 3:  # pragma: no cover
     def _unicode_to_native(string):
         return string.encode('utf8')
-else:
+else:  # pragma: no cover
     def _unicode_to_native(string):
         return string
 
