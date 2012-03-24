@@ -271,3 +271,23 @@ def test_token_serialize_css(tokenize, css_source):
         tokens = _regroup(tokenize(css_source, ignore_comments=False))
         result = ''.join(token.as_css for token in tokens)
         assert result == css_source
+
+
+@pytest.mark.parametrize(('tokenize', 'css_source'), [
+    (tokenize, test_data)
+    for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+    for test_data in [
+        '(8, foo, [z])', '[8, foo, (z)]', '{8, foo, [z]}', 'func(8, foo, [z])'
+    ]
+])
+def test_token_api(tokenize, css_source):
+    if tokenize is None:  # pragma: no cover
+        pytest.skip('Speedups not available')
+    tokens = list(regroup(tokenize(css_source)))
+    assert len(tokens) == 1
+    token = tokens[0]
+    expected_len = 7  # 2 spaces, 2 commas, 3 others.
+    assert len(token) == expected_len
+    assert len(token.content) == expected_len
+    for a, b in zip(iter(token), token.content):
+        assert a is b

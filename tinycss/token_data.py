@@ -298,6 +298,14 @@ class ContainerToken(object):
                 lines.append('    ' + line)
         return '\n'.join(lines)
 
+    # Sequence-like API (not the full collections.Sequence ABC, though)
+
+    def __iter__(self):
+        return iter(self.content)
+
+    def __len__(self):
+        return len(self.content)
+
 
 class FunctionToken(ContainerToken):
     """A :class:`ContainerToken` for a FUNCTION group.

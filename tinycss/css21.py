@@ -189,7 +189,7 @@ class CSS21Parser(CoreParser):
                     # This is unreachable since the core parser has removed
                     # any trailing white space in head.
                     media = ['all']
-            if rule.body:
+            if rule.body is not None:
                 raise ParseError(rule.body, "expected ';', got a block")
             return ImportRule(uri, media, rule.line, rule.column)
 
@@ -206,7 +206,7 @@ class CSS21Parser(CoreParser):
             rather than a block '{}'
 
         """
-        if not rule.body:
+        if rule.body is None:
             raise ParseError(rule,
                 'invalid {0} rule: missing block'.format(rule.at_keyword))
 

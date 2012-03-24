@@ -161,7 +161,8 @@ def test_parse_stylesheet(css_source, expected_rules, expected_errors):
     assert_errors(stylesheet.errors, expected_errors)
     result = [
         (rule.at_keyword, list(jsonify(rule.head)),
-            list(jsonify(rule.body.content)) if rule.body else None)
+            list(jsonify(rule.body.content))
+            if rule.body is not None else None)
         if rule.at_keyword else
         (rule.selector.as_css, [
             (decl.name, list(jsonify(decl.value.content)))

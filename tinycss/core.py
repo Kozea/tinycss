@@ -114,7 +114,7 @@ class AtRule(object):
         for token in self.head:
             for line in token.pretty().splitlines():
                 lines.append('    ' + line)
-        if self.body:
+        if self.body is not None:
             lines.append(self.body.pretty())
         else:
             lines.append(';')
