@@ -164,6 +164,8 @@ def test_color(css_source, expected_result):
         for got, expected in zip(result, expected_result):
             # Compensate for floating point errors:
             assert abs(got - expected) < 1e-10
+        for i, attr in enumerate(['red', 'green', 'blue', 'alpha']):
+            assert getattr(result, attr) == result[i]
     else:
         assert result == expected_result
 

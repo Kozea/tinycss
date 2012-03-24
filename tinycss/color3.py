@@ -14,10 +14,22 @@
 """
 
 from __future__ import unicode_literals, division
+import collections
 import itertools
 import re
 
 from .tokenizer import tokenize_grouped
+
+
+class RGBA(collections.namedtuple('RGBA', ['red', 'green', 'blue', 'alpha'])):
+    """An RGBA color.
+
+    A tuple of four floats in the 0..1 range: ``(r, g, b, a)``
+
+    Also has ``red``, ``green``, ``blue`` and ``alpha`` attributes to access
+    the same values.
+
+    """
 
 
 def parse_color_string(css_string):
@@ -48,10 +60,10 @@ def parse_color(token):
           (No exception is raised.)
         * For the currentColor keyword: the string 'currentColor'
         * Every other values (including HSL and HSLA) is converted to RGBA
-          and returned as a tuple of four floats in the 0..1 range:
-          ``(r, g, b, a)``
+          and returned as an :class:`RGBA` object (a 4-tuple with attribute
+          access).
           The alpha channel is clipped to [0, 1], but R, G, or B can be
-          out of range (eg. ``rgb(-51, 306, 0)`` is returned as
+          out of range (eg. ``rgb(-51, 306, 0)`` is represented as
           ``(-.2, 1.2, 0, 1)``.)
 
     """
@@ -63,7 +75,7 @@ def parse_color(token):
             if match:
                 r, g, b = [int(group * multiplier, 16) / 255
                            for group in match.groups()]
-                return r, g, b, 1.
+                return RGBA(r, g, b, 1.)
     elif token.type == 'FUNCTION':
         args = parse_comma_separated(token.content)
         if args:
@@ -101,10 +113,10 @@ def parse_rgb(args, alpha):
     types = [arg.type for arg in args]
     if types == ['INTEGER', 'INTEGER', 'INTEGER']:
         r, g, b = [arg.value / 255 for arg in args[:3]]
-        return r, g, b, alpha
+        return RGBA(r, g, b, alpha)
     elif types == ['PERCENTAGE', 'PERCENTAGE', 'PERCENTAGE']:
         r, g, b = [arg.value / 100 for arg in args[:3]]
-        return r, g, b, alpha
+        return RGBA(r, g, b, alpha)
 
 
 def parse_hsl(args, alpha):
@@ -117,7 +129,7 @@ def parse_hsl(args, alpha):
     if types == ['INTEGER', 'PERCENTAGE', 'PERCENTAGE']:
         hsl = [arg.value for arg in args[:3]]
         r, g, b = hsl_to_rgb(*hsl)
-        return r, g, b, alpha
+        return RGBA(r, g, b, alpha)
 
 
 def hsl_to_rgb(hue, saturation, lightness):
@@ -357,14 +369,14 @@ EXTENDED_COLOR_KEYWORDS = [
 # (r, g, b, a) in 0..1 or a string marker
 SPECIAL_COLOR_KEYWORDS = {
     'currentcolor': 'currentColor',
-    'transparent': (0., 0., 0., 0.),
+    'transparent': RGBA(0., 0., 0., 0.),
 }
 
 
-# (r, g, b, a) in 0..1 or a string marker
+# RGBA namedtuples of (r, g, b, a) in 0..1 or a string marker
 COLOR_KEYWORDS = SPECIAL_COLOR_KEYWORDS.copy()
 COLOR_KEYWORDS.update(
     # 255 maps to 1, 0 to 0, the rest is linear.
-    (keyword, (r / 255., g / 255., b / 255., 1.))
+    (keyword, RGBA(r / 255., g / 255., b / 255., 1.))
     for keyword, (r, g, b) in itertools.chain(
         BASIC_COLOR_KEYWORDS, EXTENDED_COLOR_KEYWORDS))
