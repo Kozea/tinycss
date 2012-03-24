@@ -89,7 +89,7 @@ def try_encoding(css_bytes, encoding, fallback=True):
         if not fallback:
             raise
         return None
-    if css_unicode[0] == '\ufeff':
+    if css_unicode and css_unicode[0] == '\ufeff':
         # Remove any Byte Order Mark
         css_unicode = css_unicode[1:]
     return css_unicode

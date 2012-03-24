@@ -22,6 +22,7 @@ def params(css, encoding, use_bom=False, expect_error=False, **kwargs):
 
 @pytest.mark.parametrize(('css', 'encoding', 'use_bom', 'expect_error',
                           'kwargs'), [
+    params('', 'utf8'),
     params('𐂃', 'utf8'),
     params('é', 'latin1', expect_error=True),
     params('é', 'latin1', protocol_encoding='ISO-8859-1'),
