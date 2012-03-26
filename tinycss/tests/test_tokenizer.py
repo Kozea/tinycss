@@ -82,17 +82,25 @@ foo(int x) {\
     (r'Lorem+Ipsum', [('IDENT', 'Lorem'), ('DELIM', '+'), ('IDENT', 'Ipsum')]),
     (r'url(foo\).png)', [('URI', 'foo).png')]),
 
-    # Unicode
+    # Unicode and backslash escaping
     ('\\26 B', [('IDENT', '&B')]),
+    ('\\&B', [('IDENT', '&B')]),
     ('@\\26\tB', [('ATKEYWORD', '@&B')]),
+    ('@\\&B', [('ATKEYWORD', '@&B')]),
     ('#\\26\nB', [('HASH', '#&B')]),
+    ('#\\&B', [('HASH', '#&B')]),
     ('\\26\r\nB(', [('FUNCTION', '&B(')]),
+    ('\\&B(', [('FUNCTION', '&B(')]),
     (r'12.5\000026B', [('DIMENSION', 12.5, '&b')]),
     (r'12.5\0000263B', [('DIMENSION', 12.5, '&3b')]),  # max 6 digits
+    (r'12.5\&B', [('DIMENSION', 12.5, '&b')]),
     (r'"\26 B"', [('STRING', '&B')]),
     (r"'\000026B'", [('STRING', '&B')]),
+    (r'"\&B"', [('STRING', '&B')]),
     (r'url("\26 B")', [('URI', '&B')]),
     (r'url(\26 B)', [('URI', '&B')]),
+    (r'url("\&B")', [('URI', '&B')]),
+    (r'url(\&B)', [('URI', '&B')]),
     (r'Lorem\110000Ipsum', [('IDENT', 'Lorem\uFFFDIpsum')]),
 
     #### Bad strings
