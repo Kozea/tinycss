@@ -5,6 +5,7 @@
 /.coverage
 /htmlcov
 /build
+/dist
 /.tox
 /MANIFEST
 /docs/_build
