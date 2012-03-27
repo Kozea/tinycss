@@ -62,6 +62,8 @@ def params(css, encoding, use_bom=False, expect_error=False, **kwargs):
            linking_encoding='ISO-8859-1', document_encoding='ISO-8859-8'),
 ])
 def test_decode(css, encoding, use_bom, expect_error, kwargs):
+    # Workaround PyPy and CPython 3.0 bug: https://bugs.pypy.org/issue1094
+    css = css.encode('utf16').decode('utf16')
     if use_bom:
         source = '\ufeff' + css
     else:
