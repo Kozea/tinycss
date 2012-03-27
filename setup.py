@@ -1,8 +1,7 @@
 import re
 import sys
 import os.path
-from distutils.core import setup
-from distutils.extension import Extension
+from setuptools import setup, Extension
 from distutils.errors import (
     CCompilerError, DistutilsExecError, DistutilsPlatformError)
 try:
@@ -39,11 +38,12 @@ class ve_build_ext(build_ext):
             raise BuildFailed
 
 
-fd = open(os.path.join(os.path.dirname(__file__), 'tinycss', '__init__.py'))
-try:
+ROOT = os.path.dirname(__file__)
+with open(os.path.join(ROOT, 'tinycss', '__init__.py')) as fd:
     VERSION = re.search("VERSION = '([^']+)'", fd.read()).group(1)
-finally:
-    fd.close()
+
+with open(os.path.join(ROOT, 'README.rst')) as fd:
+    README = fd.read()
 
 
 def run_setup(with_extension):
@@ -75,7 +75,8 @@ def run_setup(with_extension):
         license='BSD',
         author='Simon Sapin',
         author_email='simon.sapin@exyr.org',
-        description='A CSS parser, and nothing else.',
+        description='tinycss is a complete yet simple CSS parser for Python.',
+        long_description=README,
         packages=['tinycss', 'tinycss.tests'],
         **kwargs
     )
