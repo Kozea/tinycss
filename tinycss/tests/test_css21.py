@@ -43,7 +43,7 @@ def test_at_import(css_source, expected_rules, expected_errors):
 
     result = [
         (rule.uri, rule.media)
-        for rule in stylesheet.statements
+        for rule in stylesheet.rules
         if rule.at_keyword == '@import'
     ]
     assert result == expected_rules
@@ -77,10 +77,10 @@ def test_at_page(css, expected_result, expected_errors):
     assert_errors(stylesheet.errors, expected_errors)
 
     if expected_result is None:
-        assert not stylesheet.statements
+        assert not stylesheet.rules
     else:
-        assert len(stylesheet.statements) == 1
-        rule = stylesheet.statements[0]
+        assert len(stylesheet.rules) == 1
+        rule = stylesheet.rules[0]
         assert rule.at_keyword == '@page'
         assert rule.at_rules == []  # in CSS 2.1
         result = (
@@ -114,16 +114,16 @@ def test_at_media(css_source, expected_rules, expected_errors):
     stylesheet = CSS21Parser().parse_stylesheet(css_source)
     assert_errors(stylesheet.errors, expected_errors)
 
-    for rule in stylesheet.statements:
+    for rule in stylesheet.rules:
         assert rule.at_keyword == '@media'
     result = [
         (rule.media, [
             (sub_rule.selector.as_css, [
                 (decl.name, list(jsonify(decl.value.content)))
                 for decl in sub_rule.declarations])
-            for sub_rule in rule.statements
+            for sub_rule in rule.rules
         ])
-        for rule in stylesheet.statements
+        for rule in stylesheet.rules
     ]
     assert result == expected_rules
 

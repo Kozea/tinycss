@@ -81,7 +81,7 @@ class MediaRule(object):
         For CSS 2.1 without media queries: the media types
         as a list of strings.
 
-    .. attribute:: statements
+    .. attribute:: rules
         The list rulesets and at-rules inside the @media block.
 
     .. attribute:: line
@@ -93,9 +93,9 @@ class MediaRule(object):
     """
     at_keyword = '@media'
 
-    def __init__(self, media, statements, line, column):
+    def __init__(self, media, rules, line, column):
         self.media = media
-        self.statements = statements
+        self.rules = rules
         self.line = line
         self.column = column
 
@@ -159,9 +159,9 @@ class CSS21Parser(CoreParser):
                 raise ParseError(rule.body, 'expected media types for @media')
             media = self.parse_media(rule.head)
             self.require_at_rule_body(rule)
-            statements = self.parse_statements(
+            rules = self.parse_rules(
                 rule.body.content, errors, '@media')
-            return MediaRule(media, statements, rule.line, rule.column)
+            return MediaRule(media, rules, rule.line, rule.column)
 
         elif rule.at_keyword == '@import':
             if context != 'stylesheet':

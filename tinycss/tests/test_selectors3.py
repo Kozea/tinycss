@@ -52,7 +52,7 @@ def test_parser(css_source, expected_num_selectors, expected_errors):
     assert_errors(stylesheet.errors, expected_errors)
 
     result = []
-    for rule in stylesheet.statements:
+    for rule in stylesheet.rules:
         for selector in rule.selector_list:
             assert isinstance(selector, Selector)
         result.append(len(rule.selector_list))

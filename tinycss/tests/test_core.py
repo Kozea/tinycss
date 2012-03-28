@@ -78,8 +78,8 @@ def test_bytes(css_bytes, kwargs, expected_result, parse):
     except UnicodeDecodeError:
         result = None
     else:
-        assert stylesheet.statements[0].at_keyword == '@import'
-        head = stylesheet.statements[0].head
+        assert stylesheet.rules[0].at_keyword == '@import'
+        head = stylesheet.rules[0].head
         assert head[0].type == 'STRING'
         result = head[0].value
     assert result == expected_result
@@ -100,7 +100,7 @@ def test_at_rules(css_source, expected_rules, expected_errors):
     # Not using TestParser here:
     stylesheet = CoreParser().parse_stylesheet(css_source, encoding='utf8')
     assert_errors(stylesheet.errors, expected_errors)
-    result = len(stylesheet.statements)
+    result = len(stylesheet.rules)
     assert result == expected_rules
 
 
@@ -167,7 +167,7 @@ def test_parse_stylesheet(css_source, expected_rules, expected_errors):
         (rule.selector.as_css, [
             (decl.name, list(jsonify(decl.value.content)))
             for decl in rule.declarations])
-        for rule in stylesheet.statements
+        for rule in stylesheet.rules
     ]
     assert result == expected_rules
 

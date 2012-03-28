@@ -44,9 +44,9 @@ def test_selectors(css, expected_selector, expected_specificity,
     stylesheet = CSSPage3Parser().parse_stylesheet(css)
     assert_errors(stylesheet.errors, expected_errors)
 
-    if stylesheet.statements:
-        assert len(stylesheet.statements) == 1
-        rule = stylesheet.statements[0]
+    if stylesheet.rules:
+        assert len(stylesheet.rules) == 1
+        rule = stylesheet.rules[0]
         assert rule.at_keyword == '@page'
         selector = rule.selector
         assert rule.specificity == expected_specificity
@@ -92,8 +92,8 @@ def test_content(css, expected_declarations, expected_rules, expected_errors):
         return [(decl.name, list(jsonify(decl.value.content)))
                 for decl in rule.declarations]
 
-    assert len(stylesheet.statements) == 1
-    rule = stylesheet.statements[0]
+    assert len(stylesheet.rules) == 1
+    rule = stylesheet.rules[0]
     assert rule.at_keyword == '@page'
     assert declarations(rule) == expected_declarations
     rules = [(margin_rule.at_keyword, declarations(margin_rule))

@@ -39,7 +39,7 @@ class Stylesheet(object):
     """
     A parsed CSS stylesheet.
 
-    .. attribute:: statements
+    .. attribute:: rules
         a mixed list of :class:`AtRule` and :class:`RuleSets` as returned by
         :func:`parse_at_rule` and :func:`parse_ruleset`, in source order
 
@@ -51,18 +51,18 @@ class Stylesheet(object):
         or ``None`` for Unicode stylesheets.
 
     """
-    def __init__(self, statements, errors, encoding):
-        self.statements = statements
+    def __init__(self, rules, errors, encoding):
+        self.rules = rules
         self.errors = errors
         self.encoding = encoding
 
     def __repr__(self):  # pragma: no cover
         return '<{0.__class__.__name__} {1} rules {2} errors>'.format(
-            self, len(self.statements), len(self.errors))
+            self, len(self.rules), len(self.errors))
 
     def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
-        lines = [rule.pretty() for rule in self.statements] + [
+        lines = [rule.pretty() for rule in self.rules] + [
                  e.message for e in self.errors]
         return '\n'.join(lines)
 
@@ -318,9 +318,9 @@ class CoreParser(object):
         if encoding:
             tokens = _remove_at_charset(tokens)
         errors = []
-        statements = self.parse_statements(
+        rules = self.parse_rules(
             tokens, errors, context='stylesheet')
-        return Stylesheet(statements, errors, encoding)
+        return Stylesheet(rules, errors, encoding)
 
     def parse_style_attr(self, css_source):
         """Parse a "style" attribute (eg. of an HTML element).
@@ -335,8 +335,8 @@ class CoreParser(object):
 
     # API for subclasses:
 
-    def parse_statements(self, tokens, errors, context):
-        """Parse a sequence of statements (rulesets and at-rules).
+    def parse_rules(self, tokens, errors, context):
+        """Parse a sequence of rules (rulesets and at-rules).
 
         :param tokens:
             An iterable of tokens.
@@ -346,7 +346,7 @@ class CoreParser(object):
             Either 'stylesheet' or an at-keyword such as '@media'.
             (Some at-rules are only allowed in some contexts.)
         :return:
-            A list of parsed statements.
+            A list of parsed rules.
 
         """
         rules = []
