@@ -18,7 +18,7 @@ VERSION = '0.1dev'
 def make_parser(*base_classes, **kwargs):
     """Make a parser object with the chosen features.
 
-    :param *base_classes:
+    :param base_classes:
         Positional arguments are base classes the new parser
         class will extend.
     :param with_selectors3:
@@ -29,7 +29,7 @@ def make_parser(*base_classes, **kwargs):
     :param with_page3:
         Add :class:`CSSPage3Parser` to :obj:`base_classes`: enable
         CSS 3 Paged Media syntax.
-    :param **kwargs:
+    :param kwargs:
         Other arguments are passed to the parser’s constructor.
     :returns:
         An instance of a new subclass of :class:`CSS21Parser`

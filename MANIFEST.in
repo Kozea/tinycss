@@ -1,1 +1,1 @@
-include tinycss/speedups.c
+include README.rst CHANGES tinycss/speedups.c

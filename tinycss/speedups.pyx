@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 
 from .token_data import (
     COMPILED_TOKEN_REGEXPS, UNICODE_UNESCAPE, NEWLINE_UNESCAPE,
-    SIMPLE_UNESCAPE, FIND_NEWLINES, Token)
+    SIMPLE_UNESCAPE, FIND_NEWLINES)
 
 
 COMPILED_TOKEN_INDEXES = dict(
@@ -23,7 +23,10 @@ COMPILED_TOKEN_INDEXES = dict(
 
 
 cdef class CToken:
-    __doc__ = Token.__doc__
+    """A token built by the Cython speedups. Identical to
+    :class:`~tinycss.token_data.Token`.
+
+    """
     is_container = False
 
     cdef public object type, as_css, value, unit

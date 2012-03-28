@@ -21,6 +21,7 @@ class PropertyDeclaration(Declaration):
     Same as :class:`Declaration` with an additional attribute:
 
     .. attribute:: priority
+
         Either the string ``'important'`` or ``None``.
 
     """
@@ -28,35 +29,39 @@ class PropertyDeclaration(Declaration):
         super(PropertyDeclaration, self).__init__(name, value, line, column)
         self.priority = priority
 
+    def __repr__(self):  # pragma: no cover
+        priority = ' !' + self.priority if self.priority else ''
+        return ('<{0.__class__.__name__} {0.line}:{0.column}'
+                ' {0.name}: {0.value.as_css}{1}>'.format(self, priority))
+
 
 class PageRule(object):
     """A parsed CSS 2.1 @page rule.
 
     .. attribute:: at_keyword
+
         Always ``'@page'``
 
     .. attribute:: selector
+
         The page selector.
         In CSS 2.1 this is either ``None`` (no selector), or the string
         ``'first'``, ``'left'`` or ``'right'`` for the pseudo class
         of the same name.
 
     .. attribute:: specificity
+
         Specificity of the page selector. This is a tuple of four integers,
         but these tuples are mostly meant to be compared to each other.
 
     .. attribute:: declarations
+
         A list of :class:`PropertyDeclaration`
 
     .. attribute:: at_rules
+
         The list of parsed at-rules inside the @page block.
         Always empty for CSS 2.1.
-
-    .. attribute:: line
-        Source line where this was read.
-
-    .. attribute:: column
-        Source column where this was read.
 
     """
     at_keyword = '@page'
@@ -70,25 +75,26 @@ class PageRule(object):
         self.line = line
         self.column = column
 
+    def __repr__(self):  # pragma: no cover
+        return ('<{0.__class__.__name__} {0.line}:{0.column}'
+                ' {0.selector}>'.format(self))
+
 
 class MediaRule(object):
     """A parsed @media rule.
 
     .. attribute:: at_keyword
+
         Always ``'@media'``
 
     .. attribute:: media
+
         For CSS 2.1 without media queries: the media types
         as a list of strings.
 
     .. attribute:: rules
+
         The list rulesets and at-rules inside the @media block.
-
-    .. attribute:: line
-        Source line where this was read.
-
-    .. attribute:: column
-        Source column where this was read.
 
     """
     at_keyword = '@media'
@@ -99,28 +105,29 @@ class MediaRule(object):
         self.line = line
         self.column = column
 
+    def __repr__(self):  # pragma: no cover
+        return ('<{0.__class__.__name__} {0.line}:{0.column}'
+                ' {0.media}>'.format(self))
+
 
 class ImportRule(object):
     """A parsed @import rule.
 
     .. attribute:: at_keyword
+
         Always ``'@import'``
 
     .. attribute:: uri
+
         The URI to be imported, as read from the stylesheet.
         (URIs are not made absolute.)
 
     .. attribute:: media
+
         For CSS 2.1 without media queries: the media types
         as a list of strings.
         This attribute is explicitly ``['all']`` if the media was omitted
         in the source.
-
-    .. attribute:: line
-        Source line where this was read.
-
-    .. attribute:: column
-        Source column where this was read.
 
     """
     at_keyword = '@import'
@@ -130,6 +137,10 @@ class ImportRule(object):
         self.media = media
         self.line = line
         self.column = column
+
+    def __repr__(self):  # pragma: no cover
+        return ('<{0.__class__.__name__} {0.line}:{0.column}'
+                ' {0.uri}>'.format(self))
 
 
 class CSS21Parser(CoreParser):

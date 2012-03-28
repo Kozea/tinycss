@@ -40,15 +40,19 @@ class Stylesheet(object):
     A parsed CSS stylesheet.
 
     .. attribute:: rules
-        a mixed list of :class:`AtRule` and :class:`RuleSets` as returned by
-        :func:`parse_at_rule` and :func:`parse_ruleset`, in source order
+
+        A mixed list of :class:`RuleSet` and various at-rules, in source order.
+        Use their :obj:`at_keyword` attribute to distinguish them.
 
     .. attribute:: errors
-        a list of :class:`ParseError`
+
+        A list of :class:`ParseError`. Invalid rules and declarations
+        are ignored, with the details logged in this list.
 
     .. attribute:: encoding
-        The character encoding used to decode the stylesheet from bytes,
-        or ``None`` for Unicode stylesheets.
+
+        The character encoding that was used to decode the stylesheet
+        from bytes, or ``None`` for Unicode stylesheets.
 
     """
     def __init__(self, rules, errors, encoding):
@@ -72,21 +76,18 @@ class AtRule(object):
     An unparsed at-rule.
 
     .. attribute:: at_keyword
+
         The normalized (lower-case) at-keyword as a string. eg. '@page'
 
     .. attribute:: head
+
         The "head" of the at-rule until ';' or '{': a list of tokens
         (:class:`Token` or :class:`ContainerToken`)
 
     .. attribute:: body
+
         A block as a '{' :class:`ContainerToken`, or ``None`` if the at-rule
         ends with ';'
-
-    .. attribute:: line
-        Source line where this was read.
-
-    .. attribute:: column
-        Source column where this was read.
 
     The head was validated against the core grammar but **not** the body,
     as the body might contain declarations. In case of an error in a
@@ -125,21 +126,18 @@ class RuleSet(object):
     """A ruleset.
 
     .. attribute:: at_keyword
+
         Always ``None``. Helps to tell rulesets apart from at-rules.
 
     .. attribute:: selector
+
         A (possibly empty) :class:`ContainerToken` object.
         In CSS 3 terminology, this is actually a selector group.
 
     .. attribute:: declarations
+
         The list of :class:`Declaration` as returned by
         :func:`parse_declaration_list`, in source order.
-
-    .. attribute:: line
-        Source line where this was read.
-
-    .. attribute:: column
-        Source column where this was read.
 
     """
     def __init__(self, selector, declarations, line, column):
@@ -168,17 +166,13 @@ class Declaration(object):
     """A property declaration.
 
     .. attribute:: name
+
         The property name as a normalized (lower-case) string.
 
     .. attribute:: values
+
         The property value: a list of tokens as returned by
         :func:`parse_value`.
-
-    .. attribute:: line
-        Source line where this was read.
-
-    .. attribute:: column
-        Source column where this was read.
 
     """
     def __init__(self, name, value, line, column):
@@ -201,13 +195,29 @@ class Declaration(object):
 
 
 class ParseError(ValueError):
-    """A recoverable parsing error."""
+    """Details about a CSS syntax error. Usually indicates that something
+    (a rule or a declaration) was ignored and will not appear as a parsed
+    objects.
+
+    .. attribute:: line
+
+        Source line where the error occured.
+
+    .. attribute:: column
+
+        Column in the source line where the error occured.
+
+    .. attribute:: reason
+
+        What happend (a string).
+
+    """
     def __init__(self, subject, reason):
-        self.subject = subject
+        self.line = subject.line
+        self.column = subject.column
         self.reason = reason
         self.msg = self.message = (
-            'Parse error at {0.subject.line}:{0.subject.column}, {0.reason}'
-            .format(self))
+            'Parse error at {0.line}:{0.column}, {0.reason}'.format(self))
         super(ParseError, self).__init__(self.message)
 
     def __repr__(self):  # pragma: no cover
@@ -247,22 +257,12 @@ class CoreParser(object):
                               linking_encoding=None, document_encoding=None):
         """Parse a stylesheet from a file or filename.
 
-        The character encoding is determined from the passed metadata and the
-        ``@charset`` rule in the stylesheet (if any).
+        The character encoding is determined as in
+        :meth:`parse_stylesheet_bytes`.
 
         :param css_file:
             Either a file (any object with a :meth:`~file.read` method)
             or a filename.
-        :param protocol_encoding:
-            The "charset" parameter of a "Content-Type" HTTP header (if any),
-            or similar metadata for other protocols.
-        :param linking_encoding:
-            ``<link charset="">`` or other metadata from the linking mechanism
-            (if any)
-        :param document_encoding:
-            Encoding of the referring style sheet or document (if any)
-        :raises:
-            :class:`UnicodeDecodeError` if decoding failed
         :return:
             A :class:`Stylesheet`.
 
@@ -325,10 +325,13 @@ class CoreParser(object):
     def parse_style_attr(self, css_source):
         """Parse a "style" attribute (eg. of an HTML element).
 
+        This method only accepts Unicode as the source (HTML) document
+        is supposed to handle the character encoding.
+
         :param css_source:
             The attribute value, as an unicode string.
         :return:
-            A tuple of the list of valid :class`Declaration` and a list
+            A tuple of the list of valid :class:`Declaration` and a list
             of :class:`ParseError`.
         """
         return self.parse_declaration_list(tokenize_grouped(css_source))

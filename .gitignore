@@ -9,3 +9,4 @@
 /.tox
 /MANIFEST
 /docs/_build
+/env

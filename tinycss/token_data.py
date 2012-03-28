@@ -184,20 +184,74 @@ class Token(object):
     """A single atomic token.
 
     .. attribute:: is_container
+
         Always ``False``.
         Helps to tell :class:`Token` apart from :class:`ContainerToken`.
 
     .. attribute:: type
-        The type of token as a string. eg. 'IDENT'
+
+        The type of token as a string:
+
+        ``S``
+            A sequence of white space
+
+        ``IDENT``
+            An identifier: a name that does not start with a digit.
+            A name is a sequence of letters, digits, escaped characters
+            and non-ASCII characters. Eg: ``margin-left``
+
+        ``HASH``
+            ``#`` followed immediately by a name. Eg: ``#ff8800``
+
+        ``FUNCTION``
+            An identifier followed immediately by ``(``. Eg: ``rgba(``
+
+        ``ATKEYWORD``
+            ``@`` followed immediately by an identifier. Eg: ``@page``
+
+        ``URI``
+            Eg: ``url(foo)`` The content may or may not be quoted.
+
+        ``UNICODE-RANGE``
+            ``U+`` followed by one or two hexadecimal
+            Unicode codepoints. Eg: ``U+20-00FF``
+
+        ``INTEGER``
+            An integer with an optional ``+`` or ``-`` sign
+
+        ``NUMBER``
+            A non-integer number  with an optional ``+`` or ``-`` sign
+
+        ``DIMENSION``
+            An integer or number followed immediately by an
+            identifier (the unit). Eg: ``12px``
+
+        ``PERCENTAGE``
+            An integer or number followed immediately by ``%``
+
+        ``STRING``
+            A string, quoted with ``"`` or ``'``
+
+        ``:`` or ``;``
+            That character.
+
+        ``DELIM``
+            A single character not matched in another token. Eg: ``,``
+
+        Note that other token types exist in the early tokenization steps,
+        but these are ignored, are syntax errors, or are later transformed
+        into :class:`ContainerToken` or :class:`FunctionToken`.
 
     .. attribute:: as_css
+
         The string as it was read from the CSS source
 
     .. attribute:: value
+
         The parsed value:
 
         * All backslash-escapes are unescaped.
-        * NUMBER, PERCENTAGE or DIMENSION tokens: the numeric value
+        * INTEGER, NUMBER, PERCENTAGE or DIMENSION tokens: the numeric value
           as an int or float.
         * STRING tokens: the unescaped string without quotes
         * URI tokens: the unescaped URI without quotes or
@@ -207,15 +261,18 @@ class Token(object):
         * Other tokens: same as :attr:`as_css`
 
     .. attribute:: unit
+
         * DIMENSION tokens: the normalized (unescaped, lower-case)
-          unit name as a string. eg. 'px'
-        * PERCENTAGE tokens: the string '%'
+          unit name as a string. eg. ``'px'``
+        * PERCENTAGE tokens: the string ``'%'``
         * Other tokens: ``None``
 
     .. attribute:: line
+
         The line number of this token in the CSS source
 
     .. attribute:: column
+
         The column number inside a line of this token in the CSS source
 
     """
@@ -242,25 +299,35 @@ class ContainerToken(object):
     """A token that contains other (nested) tokens.
 
     .. attribute:: is_container
+
         Always ``True``.
         Helps to tell :class:`ContainerToken` apart from :class:`Token`.
 
     .. attribute:: type
-        The type of token as a string. eg. 'IDENT'
+
+        The type of token as a string. One of ``{``, ``(``, ``[`` or
+        ``FUNCTION``. For ``FUNCTION``, the object is actually a
+        :class:`FunctionToken`.
 
     .. attribute:: css_start
+
         The string for the opening token as it was read from the CSS source
 
     .. attribute:: css_end
+
         The string for the closing token as it was read from the CSS source
 
     .. attribute:: content
-        A list of :class:`Token` or nested :class:`ContainerToken`
+
+        A list of :class:`Token` or nested :class:`ContainerToken`,
+        not including the opening or closing token.
 
     .. attribute:: line
+
         The line number of the opening token in the CSS source
 
     .. attribute:: column
+
         The column number inside a line of the opening token in the CSS source
 
     """
@@ -308,10 +375,11 @@ class ContainerToken(object):
 
 
 class FunctionToken(ContainerToken):
-    """A :class:`ContainerToken` for a FUNCTION group.
+    """A specialized :class:`ContainerToken` for a ``FUNCTION`` group.
     Has an additional attribute:
 
     .. attribute:: function_name
+
         The unescaped name of the function, with the ``(`` marker removed.
 
     """
