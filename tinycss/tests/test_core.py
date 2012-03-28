@@ -126,34 +126,34 @@ def test_at_rules(css_source, expected_rules, expected_errors):
 
     ('foo', [], ['no declaration block found']),
 
-    ('foo @page {} bar {}', [('bar ', [])],
+    ('foo @page {} bar {}', [('bar', [])],
         ['unexpected ATKEYWORD token in selector']),
 
     ('foo { content: "unclosed string;\n color:red; ; margin/**/: 2cm; }',
-        [('foo ', [('margin', [('DIMENSION', 2)])])],
+        [('foo', [('margin', [('DIMENSION', 2)])])],
         ['unexpected BAD_STRING token in property value']),
 
     ('foo { 4px; bar: 12% }',
-        [('foo ', [('bar', [('PERCENTAGE', 12)])])],
+        [('foo', [('bar', [('PERCENTAGE', 12)])])],
         ['expected a property name, got DIMENSION']),
 
     ('foo { bar! 3cm auto ; baz: 7px }',
-        [('foo ', [('baz', [('DIMENSION', 7)])])],
+        [('foo', [('baz', [('DIMENSION', 7)])])],
         ["expected ':', got DELIM"]),
 
     ('foo { bar ; baz: {("}"/* comment */) {0@fizz}} }',
-        [('foo ', [('baz', [('{', [
+        [('foo', [('baz', [('{', [
             ('(', [('STRING', '}')]), ('S', ' '),
             ('{', [('INTEGER', 0), ('ATKEYWORD', '@fizz')])
         ])])])],
         ["expected ':'"]),
 
     ('foo { bar: ; baz: not(z) }',
-        [('foo ', [('baz', [('FUNCTION', 'not', [('IDENT', 'z')])])])],
+        [('foo', [('baz', [('FUNCTION', 'not', [('IDENT', 'z')])])])],
         ['expected a property value']),
 
     ('foo { bar: (]) ; baz: U+20 }',
-        [('foo ', [('baz', [('UNICODE-RANGE', 'U+20')])])],
+        [('foo', [('baz', [('UNICODE-RANGE', 'U+20')])])],
         ['unmatched ] token in (']),
 ])
 def test_parse_stylesheet(css_source, expected_rules, expected_errors):

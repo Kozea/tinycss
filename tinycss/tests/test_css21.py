@@ -104,7 +104,7 @@ def test_at_page(css, expected_result, expected_errors):
     ('@media screen print {}', [], ['expected a comma, got S']),
 
     ('@media all { @page { a: 1 } @media; @import; foo { a: 1 } }',
-        [(['all'], [('foo ', [('a', [('INTEGER', 1)])])])],
+        [(['all'], [('foo', [('a', [('INTEGER', 1)])])])],
         ['@page rule not allowed in @media',
          '@media rule not allowed in @media',
          '@import rule not allowed in @media']),

@@ -467,6 +467,8 @@ class CoreParser(object):
         for token in chain([first_token], tokens):
             if token.type == '{':
                 # Parse/validate once we’ve read the whole rule
+                while selector_parts and selector_parts[-1].type == 'S':
+                    selector_parts.pop()
                 for selector_token in selector_parts:
                     self.validate_any(selector_token, 'selector')
                 start = selector_parts[0] if selector_parts else token
