@@ -71,12 +71,23 @@ def run_setup(with_extension):
     setup(
         name='tinycss',
         version=VERSION,
-        url='https://github.com/SimonSapin/tinycss',
+        url='http://packages.python.org/tinycss/',
         license='BSD',
         author='Simon Sapin',
         author_email='simon.sapin@exyr.org',
         description='tinycss is a complete yet simple CSS parser for Python.',
         long_description=README,
+        classifiers=[
+            'Development Status :: 3 - Alpha',
+            'Intended Audience :: Developers',
+            'License :: OSI Approved :: BSD License',
+            'Programming Language :: Python :: 2',
+            'Programming Language :: Python :: 2.6',
+            'Programming Language :: Python :: 2.7',
+            'Programming Language :: Python :: 3',
+            'Programming Language :: Python :: 3.1',
+            'Programming Language :: Python :: 3.2',
+        ],
         packages=['tinycss', 'tinycss.tests'],
         **kwargs
     )
