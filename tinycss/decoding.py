@@ -78,13 +78,16 @@ def decode(css_bytes, protocol_encoding=None,
             css_unicode = try_encoding(css_bytes, encoding)
             if css_unicode is not None:
                 return css_unicode, encoding
-    return try_encoding(css_bytes, 'utf8', fallback=False), 'utf8'
+    css_unicode = try_encoding(css_bytes, 'UTF-8')
+    if css_unicode is not None:
+        return css_unicode, 'UTF-8'
+    return try_encoding(css_bytes, 'ISO-8859-1', fallback=False), 'ISO-8859-1'
 
 
 def try_encoding(css_bytes, encoding, fallback=True):
     try:
         css_unicode = css_bytes.decode(encoding)
-    # LookupEror means unknown encoding
+    # LookupError means unknown encoding
     except (UnicodeDecodeError, LookupError):
         if not fallback:
             raise

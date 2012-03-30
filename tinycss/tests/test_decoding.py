@@ -22,22 +22,24 @@ def params(css, encoding, use_bom=False, expect_error=False, **kwargs):
 
 @pytest.mark.parametrize(('css', 'encoding', 'use_bom', 'expect_error',
                           'kwargs'), [
-    params('', 'utf8'),
+    params('', 'utf8'),  # default to utf8
     params('𐂃', 'utf8'),
-    params('é', 'latin1', expect_error=True),
-    params('é', 'latin1', protocol_encoding='ISO-8859-1'),
-    params('é', 'latin1', linking_encoding='ISO-8859-1'),
-    params('é', 'latin1', document_encoding='ISO-8859-1'),
-    params('é', 'latin1', protocol_encoding='utf8',
-                          document_encoding='latin1'),
-    params('@charset "utf8"; é', 'latin1', expect_error=True),
-    params('@charset "uùùùùtf8"; é', 'latin1', expect_error=True),
-    params('@charset "utf8"; é', 'latin1', document_encoding='latin1'),
-    params('é', 'latin1', linking_encoding='utf8',
-                          document_encoding='latin1'),
+    params('é', 'latin1'),  # utf8 fails, fall back on ShiftJIS
+    params('£', 'ShiftJIS', expect_error=True),
+    params('£', 'ShiftJIS', protocol_encoding='Shift-JIS'),
+    params('£', 'ShiftJIS', linking_encoding='Shift-JIS'),
+    params('£', 'ShiftJIS', document_encoding='Shift-JIS'),
+    params('£', 'ShiftJIS', protocol_encoding='utf8',
+                          document_encoding='ShiftJIS'),
+    params('@charset "utf8"; £', 'ShiftJIS', expect_error=True),
+    params('@charset "utf£"; £', 'ShiftJIS', expect_error=True),
+    params('@charset "unknown-encoding"; £', 'ShiftJIS', expect_error=True),
+    params('@charset "utf8"; £', 'ShiftJIS', document_encoding='ShiftJIS'),
+    params('£', 'ShiftJIS', linking_encoding='utf8',
+                          document_encoding='ShiftJIS'),
     params('@charset "utf-32"; 𐂃', 'utf-32-be'),
-    params('@charset "ISO-8859-1"; é', 'latin1'),
-    params('@charset "ISO-8859-8"; é', 'latin1', expect_error=True),
+    params('@charset "Shift-JIS"; £', 'ShiftJIS'),
+    params('@charset "ISO-8859-8"; £', 'ShiftJIS', expect_error=True),
     params('𐂃', 'utf-16-le', expect_error=True),  # no BOM
     params('𐂃', 'utf-16-le', use_bom=True),
     params('𐂃', 'utf-32-be', expect_error=True),
@@ -47,19 +49,21 @@ def params(css, encoding, use_bom=False, expect_error=False, **kwargs):
     params('@charset "utf-32-le"; 𐂃', 'utf-32-be',
            use_bom=True, expect_error=True),
     # protocol_encoding takes precedence over @charset
-    params('@charset "ISO-8859-8"; é', 'latin1',
-           protocol_encoding='ISO-8859-1'),
-    params('@charset "ISO-8859-1"; é', 'latin1',
+    params('@charset "ISO-8859-8"; £', 'ShiftJIS',
+           protocol_encoding='Shift-JIS'),
+    params('@charset "unknown-encoding"; £', 'ShiftJIS',
+           protocol_encoding='Shift-JIS'),
+    params('@charset "Shift-JIS"; £', 'ShiftJIS',
            protocol_encoding='utf8'),
     # @charset takes precedence over document_encoding
-    params('@charset "ISO-8859-1"; é', 'latin1',
+    params('@charset "Shift-JIS"; £', 'ShiftJIS',
            document_encoding='ISO-8859-8'),
     # @charset takes precedence over linking_encoding
-    params('@charset "ISO-8859-1"; é', 'latin1',
+    params('@charset "Shift-JIS"; £', 'ShiftJIS',
            linking_encoding='ISO-8859-8'),
     # linking_encoding takes precedence over document_encoding
-    params('é', 'latin1',
-           linking_encoding='ISO-8859-1', document_encoding='ISO-8859-8'),
+    params('£', 'ShiftJIS',
+           linking_encoding='Shift-JIS', document_encoding='ISO-8859-8'),
 ])
 def test_decode(css, encoding, use_bom, expect_error, kwargs):
     # Workaround PyPy and CPython 3.0 bug: https://bugs.pypy.org/issue1094
@@ -69,10 +73,7 @@ def test_decode(css, encoding, use_bom, expect_error, kwargs):
     else:
         source = css
     css_bytes = source.encode(encoding)
-    try:
-        result, result_encoding = decode(css_bytes, **kwargs)
-    except UnicodeDecodeError as exc:
-        result = exc
+    result, result_encoding = decode(css_bytes, **kwargs)
     if expect_error:
         assert result != css, 'Unexpected unicode success'
     else:

@@ -48,14 +48,17 @@ def parse_filename(css_bytes, kwargs):
     for params in [
         ('@import "é";'.encode('utf8'), {}, 'é'),
         ('@import "é";'.encode('utf16'), {}, 'é'),  # with a BOM
-        ('@import "é";'.encode('latin1'), {}, None),
-        ('@charset "latin1";@import "é";'.encode('latin1'), {}, 'é'),
-        (' @charset "latin1";@import "é";'.encode('latin1'), {}, None),
-        ('@import "é";'.encode('latin1'),
-            {'document_encoding': 'latin1'}, 'é'),
-        ('@import "é";'.encode('latin1'), {'document_encoding': 'utf8'}, None),
-        ('@charset "utf8"; @import "é";'.encode('utf8'),
-            {'document_encoding': 'latin1'}, 'é'),
+        ('@import "é";'.encode('latin1'), {}, 'é'),
+        ('@import "£";'.encode('Shift-JIS'), {}, '\x81\x92'), # latin1 mojibake
+        ('@charset "Shift-JIS";@import "£";'.encode('Shift-JIS'), {}, '£'),
+        (' @charset "Shift-JIS";@import "£";'.encode('Shift-JIS'), {},
+            '\x81\x92'),
+        ('@import "£";'.encode('Shift-JIS'),
+            {'document_encoding': 'Shift-JIS'}, '£'),
+        ('@import "£";'.encode('Shift-JIS'),
+            {'document_encoding': 'utf8'}, '\x81\x92'),
+        ('@charset "utf8"; @import "£";'.encode('utf8'),
+            {'document_encoding': 'latin1'}, '£'),
         # Mojibake yay!
         (' @charset "utf8"; @import "é";'.encode('utf8'),
             {'document_encoding': 'latin1'}, 'Ã©'),
@@ -63,14 +66,9 @@ def parse_filename(css_bytes, kwargs):
     ]
 ])
 def test_bytes(css_bytes, kwargs, expected_result, parse):
-    try:
-        stylesheet = parse(css_bytes, kwargs)
-    except UnicodeDecodeError:
-        result = None
-    else:
-        assert stylesheet.rules[0].at_keyword == '@import'
-        result = stylesheet.rules[0].uri
-    assert result == expected_result
+    stylesheet = parse(css_bytes, kwargs)
+    assert stylesheet.rules[0].at_keyword == '@import'
+    assert stylesheet.rules[0].uri == expected_result
 
 
 @pytest.mark.parametrize(('css_source', 'expected_rules', 'expected_errors'), [
