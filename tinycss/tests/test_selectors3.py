@@ -13,7 +13,6 @@ import os
 
 import pytest
 
-from tinycss.core import CoreParser
 from . import assert_errors
 
 try:

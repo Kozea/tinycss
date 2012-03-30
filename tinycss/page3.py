@@ -13,8 +13,7 @@
 """
 
 from __future__ import unicode_literals, division
-from .core import ParseError
-from .css21 import CSS21Parser
+from .css21 import CSS21Parser, ParseError
 
 
 class MarginRule(object):

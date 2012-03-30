@@ -17,8 +17,7 @@ from __future__ import unicode_literals, division
 
 from .tokenizer import tokenize_grouped
 from .parsing import split_on_comma
-from .core import ParseError
-from .css21 import CSS21Parser
+from .css21 import CSS21Parser, ParseError
 
 try:
     from lxml import cssselect

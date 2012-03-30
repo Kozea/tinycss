@@ -11,8 +11,6 @@
 from __future__ import unicode_literals
 import itertools
 
-import pytest
-
 from tinycss import make_parser
 from tinycss.page3 import CSSPage3Parser
 from .test_selectors3 import LXML_INSTALLED
