@@ -203,9 +203,6 @@ class Token(object):
         ``HASH``
             ``#`` followed immediately by a name. Eg: ``#ff8800``
 
-        ``FUNCTION``
-            An identifier followed immediately by ``(``. Eg: ``rgba(``
-
         ``ATKEYWORD``
             ``@`` followed immediately by an identifier. Eg: ``@page``
 
@@ -250,15 +247,17 @@ class Token(object):
 
         The parsed value:
 
-        * All backslash-escapes are unescaped.
         * INTEGER, NUMBER, PERCENTAGE or DIMENSION tokens: the numeric value
           as an int or float.
         * STRING tokens: the unescaped string without quotes
         * URI tokens: the unescaped URI without quotes or
           ``url(`` and ``)`` markers.
-        * IDENT, ATKEYWORD, HASH or FUNCTION tokens: the unescaped token,
-          with ``@``, ``#`` or ``(`` markers left as-is
+        * IDENT, ATKEYWORD or HASH tokens: the unescaped token,
+          with ``@`` or ``#`` markers left as-is
         * Other tokens: same as :attr:`as_css`
+
+        *Unescaped* refers to the various escaping methods based on the
+        backslash ``\`` character in CSS syntax.
 
     .. attribute:: unit
 
@@ -311,11 +310,13 @@ class ContainerToken(object):
 
     .. attribute:: css_start
 
-        The string for the opening token as it was read from the CSS source
+        The string for the opening token as it was read from the CSS source.
+        Eg: ``{``
 
     .. attribute:: css_end
 
         The string for the closing token as it was read from the CSS source
+        Eg: ``}``
 
     .. attribute:: content
 

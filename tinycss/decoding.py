@@ -34,6 +34,8 @@ def decode(css_bytes, protocol_encoding=None,
     """
     Determine the character encoding from the passed metadata and the
     ``@charset`` rule in the stylesheet (if any); and decode accordingly.
+    If no encoding information is available or decoding fails,
+    decoding defaults to UTF-8 and then fall back on ISO-8859-1.
 
     :param css_bytes:
         a CSS stylesheet as a byte string
@@ -45,8 +47,6 @@ def decode(css_bytes, protocol_encoding=None,
         (if any)
     :param document_encoding:
         Encoding of the referring style sheet or document (if any)
-    :raises:
-        :class:`UnicodeDecodeError` if decoding failed
     :return:
         A tuple of an Unicode string, with any BOM removed, and the
         encoding that was used.

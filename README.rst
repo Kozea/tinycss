@@ -15,7 +15,7 @@ It is designed to be easy to extend for new CSS modules.
 Quick facts:
 
 * Free software: BSD licensed
-* Compatible Python 2.6+ and 3.x
+* Compatible with Python 2.6+ and 3.x
 * `Latest documentation <http://packages.python.org/tinycss/>`_
 * Source, issues and pull requests `on Github
   <https://github.com/SimonSapin/tinycss/>`_

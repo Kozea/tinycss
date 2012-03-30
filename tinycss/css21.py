@@ -41,7 +41,9 @@ class Stylesheet(object):
 
     .. attribute:: rules
 
-        A mixed list of :class:`RuleSet` and various at-rules, in source order.
+        A mixed list, in source order, of :class:`RuleSet` and various
+        at-rules such as :class:`ImportRule`, :class:`MediaRule`
+        and :class:`PageRule`.
         Use their :obj:`at_keyword` attribute to distinguish them.
 
     .. attribute:: errors
@@ -74,7 +76,7 @@ class Stylesheet(object):
 class ParseError(ValueError):
     """Details about a CSS syntax error. Usually indicates that something
     (a rule or a declaration) was ignored and will not appear as a parsed
-    objects.
+    object.
 
     .. attribute:: line
 
@@ -161,13 +163,12 @@ class RuleSet(object):
 
     .. attribute:: selector
 
-        A (possibly empty) :class:`ContainerToken` object.
+        The selecor as a :class:`~tinycss.token_data.ContainerToken` object.
         In CSS 3 terminology, this is actually a selector group.
 
     .. attribute:: declarations
 
-        The list of :class:`Declaration` as returned by
-        :func:`parse_declaration_list`, in source order.
+        The list of :class:`Declaration`, in source order.
 
     """
     def __init__(self, selector, declarations, line, column):
@@ -201,19 +202,33 @@ class Declaration(object):
 
     .. attribute:: value
 
-        The property value: a list of tokens as returned by
-        :func:`parse_value`.
+        The property value as a :class:`~tinycss.token_data.ContainerToken`.
+
+        The value is not parsed. UAs using tinycss may only support
+        some properties or some values and tinycss does not know which.
+        They need to parse values themselves and ignore declarations with
+        unknown or unsupported properties or values, and fall back
+        on any previous declaration.
+
+        :mod:`tinycss.colors3` parses color values, but other values
+        will need specific parsing/validation code.
+
+    .. attribute:: priority
+
+        Either the string ``'important'`` or ``None``.
 
     """
-    def __init__(self, name, value, line, column):
+    def __init__(self, name, value, priority, line, column):
         self.name = name
         self.value = value
+        self.priority = priority
         self.line = line
         self.column = column
 
     def __repr__(self):  # pragma: no cover
+        priority = ' !' + self.priority if self.priority else ''
         return ('<{0.__class__.__name__} {0.line}:{0.column}'
-                ' {0.name}: {0.value.as_css}>'.format(self))
+                ' {0.name}: {0.value.as_css}{1}>'.format(self, priority))
 
     def pretty(self):  # pragma: no cover
         """Return an indented string representation for debugging"""
@@ -222,26 +237,6 @@ class Declaration(object):
             for line in token.pretty().splitlines():
                 lines.append('    ' + line)
         return '\n'.join(lines)
-
-
-class PropertyDeclaration(Declaration):
-    """A CSS 2.1 property declaration.
-
-    Same as :class:`Declaration` with an additional attribute:
-
-    .. attribute:: priority
-
-        Either the string ``'important'`` or ``None``.
-
-    """
-    def __init__(self, name, value, priority, line, column):
-        super(PropertyDeclaration, self).__init__(name, value, line, column)
-        self.priority = priority
-
-    def __repr__(self):  # pragma: no cover
-        priority = ' !' + self.priority if self.priority else ''
-        return ('<{0.__class__.__name__} {0.line}:{0.column}'
-                ' {0.name}: {0.value.as_css}{1}>'.format(self, priority))
 
 
 class PageRule(object):
@@ -265,11 +260,11 @@ class PageRule(object):
 
     .. attribute:: declarations
 
-        A list of :class:`PropertyDeclaration`
+        A list of :class:`Declaration`, in source order.
 
     .. attribute:: at_rules
 
-        The list of parsed at-rules inside the @page block.
+        The list of parsed at-rules inside the @page block, in source order.
         Always empty for CSS 2.1.
 
     """
@@ -303,7 +298,8 @@ class MediaRule(object):
 
     .. attribute:: rules
 
-        The list rulesets and at-rules inside the @media block.
+        The list :class:`RuleSet` and various at-rules inside the @media
+        block, in source order.
 
     """
     at_keyword = '@media'
@@ -390,11 +386,11 @@ class CSS21Parser(object):
     # User API:
 
     def parse_stylesheet_file(self, css_file, protocol_encoding=None,
-                              linking_encoding=None, document_encoding=None):
+                             linking_encoding=None, document_encoding=None):
         """Parse a stylesheet from a file or filename.
 
-        The character encoding is determined as in
-        :meth:`parse_stylesheet_bytes`.
+        Character encoding-related parameters and behavior are the same
+        as in :meth:`parse_stylesheet_bytes`.
 
         :param css_file:
             Either a file (any object with a :meth:`~file.read` method)
@@ -417,6 +413,8 @@ class CSS21Parser(object):
 
         The character encoding is determined from the passed metadata and the
         ``@charset`` rule in the stylesheet (if any).
+        If no encoding information is available or decoding fails,
+        decoding defaults to UTF-8 and then fall back on ISO-8859-1.
 
         :param css_bytes:
             A CSS stylesheet as a byte string.
@@ -428,8 +426,6 @@ class CSS21Parser(object):
             (if any)
         :param document_encoding:
             Encoding of the referring style sheet or document (if any)
-        :raises:
-            :class:`UnicodeDecodeError` if decoding failed
         :return:
             A :class:`Stylesheet`.
 
@@ -467,8 +463,8 @@ class CSS21Parser(object):
         :param css_source:
             The attribute value, as an unicode string.
         :return:
-            A tuple of the list of valid :class:`Declaration` and a list
-            of :class:`ParseError`.
+            A tuple of the list of valid :class:`Declaration` and
+            a list of :class:`ParseError`.
         """
         return self.parse_declaration_list(tokenize_grouped(css_source))
 
@@ -711,7 +707,7 @@ class CSS21Parser(object):
         :returns:
             A tuple of:
 
-            * A list of :class:`PropertyDeclaration`
+            * A list of :class:`Declaration`
             * A list of parsed at-rules (empty for CSS 2.1)
             * A list of :class:`ParseError`
 
@@ -864,7 +860,7 @@ class CSS21Parser(object):
         value, priority = self.parse_value_priority(value)
         value = ContainerToken(
             'VALUES', '', '', value, value[0].line, value[0].column)
-        return PropertyDeclaration(
+        return Declaration(
             property_name, value, priority, name_token.line, name_token.column)
 
     def parse_value_priority(self, original_value):
