@@ -100,7 +100,7 @@ def test_at_rules(css_source, expected_rules, expected_errors):
 
     ('@import "foo.css"/**/', [], ['incomplete at-rule']),
 
-    ('{}', [('', [])], []),
+    ('{}', [], ['empty selector']),
 
     ('a{b:4}', [('a', [('b', [('INTEGER', 4)])])], []),
 

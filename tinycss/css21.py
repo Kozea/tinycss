@@ -730,6 +730,8 @@ class CSS21Parser(object):
                 # Parse/validate once we’ve read the whole rule
                 while selector_parts and selector_parts[-1].type == 'S':
                     selector_parts.pop()
+                if not selector_parts:
+                    raise ParseError(first_token, 'empty selector')
                 for selector_token in selector_parts:
                     self.validate_any(selector_token, 'selector')
                 start = selector_parts[0] if selector_parts else token
