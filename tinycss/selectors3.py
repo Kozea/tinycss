@@ -39,18 +39,23 @@ class Selector(object):
 
     In CSS 3, each ruleset has a list of comma-separated selectors.
     A :class:`Selector` object represents one of these selectors.
+    These selectors optionally have one *pseudo-element* that must be
+    at the end.
 
-    .. attribute:: parsed_selector
+    .. commented for now: this is expected to change
+    .. .. attribute:: parsed_selector
+
         The selector parsed as a tree of cssselect internal objects.
 
     .. attribute:: pseudo_element
-        One of ``'before', 'after', 'first-letter', 'first-line', None``
+
+        One of ``'before'``, ``'after'``, ``'first-letter'``, ``'first-line'``
+        or ``None``.
 
     .. attribute:: specificity
+
         The specificity of this selector. This is a tuple of four integers,
         but these tuples are mostly meant to be compared to each other.
-
-        http://www.w3.org/TR/css3-selectors/#specificity
 
     """
     def __init__(self, parsed_selector, pseudo_element, specificity, match):
@@ -60,17 +65,26 @@ class Selector(object):
         # Mask the method (class attribute) with a callable instance attribute.
         self.match = match
 
-    def match(self, document, **kwargs):  # pragma: no cover
-        """Returns the list of elements that match the selector.
+    def match(self, lxml_element, **kwargs):
+        """Find elements in an XML or HTML document that match the part
+        of this selector before any *pseudo-element*.
 
-        This works with :mod:`lxml.cssselect`, so the document must
-        have been parsed with lxml.
+        This is based on :mod:`lxml.cssselect`, so the document must
+        have been parsed with lxml, not another implementation of the
+        ElementTree API.
 
         Keyword arguments are passed to the underlying
         :class:`lxml.etree.XPath` object. In particular, a `namespaces`_
         dict can be passed.
 
         .. _namespaces: http://lxml.de/xpathxslt.html#namespaces-and-prefixes
+
+        :param lxml_element:
+            A lxml :class:`~lxml.etree.Element` or
+            :class:`~lxml.etree.ElementTree`.
+        :returns:
+            The list of elements inside this tree that match the selector.
+            Remember to consider :attr:`pseudo_element` separately.
 
         """
         # This dummy method is mostly here to hold its docstring,
@@ -202,9 +216,12 @@ def _calculate_specificity(parsed_selector):
 
 
 class CSSSelectors3Parser(CSS21Parser):
-    """Adds a ``selector_list`` attribute to the :class:`RuleSet` objects
-    returned by a parser. The attribute is a list of :class:`Selector`
-    for this ruleset,.as returned by :func:`parse_selector3`
+    """Extend :class:`~.css21.CSS21Parser` to add parsing and matching of
+    `Level 3 Selectors <http://www.w3.org/TR/selectors/>`_.
+
+    Compared to CSS 2.1, :class:`~.css21.RuleSet` objects get a new'
+    ``selector_list`` attribute set to the list of parsed :class:`Selector`
+    objects for this ruleset.
 
     """
     def parse_ruleset(self, first_token, tokens):

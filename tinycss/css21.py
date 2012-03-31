@@ -47,7 +47,7 @@ class Stylesheet(object):
 
     .. attribute:: errors
 
-        A list of :class:`ParseError`. Invalid rules and declarations
+        A list of :exc:`ParseError`. Invalid rules and declarations
         are ignored, with the details logged in this list.
 
     .. attribute:: encoding
@@ -431,7 +431,7 @@ class CSS21Parser(object):
             The attribute value, as an unicode string.
         :return:
             A tuple of the list of valid :class:`Declaration` and
-            a list of :class:`ParseError`.
+            a list of :exc:`ParseError`.
         """
         return self.parse_declaration_list(tokenize_grouped(css_source))
 
@@ -443,7 +443,7 @@ class CSS21Parser(object):
         :param tokens:
             An iterable of tokens.
         :param errors:
-            A list where to append encountered :class:`ParseError`
+            A list where to append encountered :exc:`ParseError`
         :param context:
             Either 'stylesheet' or an at-keyword such as '@media'.
             (Some at-rules are only allowed in some contexts.)
@@ -483,7 +483,7 @@ class CSS21Parser(object):
         :return:
             An unparsed :class:`AtRule`
         :raises:
-            :class:`ParseError` if the head is invalid for the core grammar.
+            :exc:`ParseError` if the head is invalid for the core grammar.
             The body is **not** validated. See :class:`AtRule`.
 
         """
@@ -533,7 +533,7 @@ class CSS21Parser(object):
             Either 'stylesheet' or an at-keyword such as '@media'.
             (Some at-rules are only allowed in some contexts.)
         :raises:
-            :class:`ParseError` if the rule is invalid.
+            :exc:`ParseError` if the rule is invalid.
         :return:
             A parsed at-rule or None (ignore)
 
@@ -613,7 +613,7 @@ class CSS21Parser(object):
         :param tokens:
             An non-empty iterable of tokens
         :raises:
-            :class:`ParseError` on invalid media types/queries
+            :exc:`ParseError` on invalid media types/queries
         :returns:
             For CSS 2.1, a list of media types as strings
         """
@@ -649,7 +649,7 @@ class CSS21Parser(object):
             A page selector. For CSS 2.1, this is 'first', 'left', 'right'
             or None.
         :raises:
-            :class:`ParseError` on invalid selectors
+            :exc:`ParseError` on invalid selectors
 
         """
         if not head:
@@ -670,13 +670,13 @@ class CSS21Parser(object):
         :param body:
             The ``body`` attribute of an unparsed :class:`AtRule`.
         :param errors:
-            A list where to append encountered :class:`ParseError`
+            A list where to append encountered :exc:`ParseError`
         :returns:
             A tuple of:
 
             * A list of :class:`Declaration`
             * A list of parsed at-rules (empty for CSS 2.1)
-            * A list of :class:`ParseError`
+            * A list of :exc:`ParseError`
 
         """
         at_rules = []
@@ -716,10 +716,10 @@ class CSS21Parser(object):
             for one ruleset.
         :return:
             a tuple of a :class:`RuleSet` and an error list.
-            The errors are recovered :class:`ParseError` in declarations.
+            The errors are recovered :exc:`ParseError` in declarations.
             (Parsing continues from the next declaration on such errors.)
         :raises:
-            :class:`ParseError` if the selector is invalid for the
+            :exc:`ParseError` if the selector is invalid for the
             core grammar.
             Note a that a selector can be valid for the core grammar but
             not for CSS 2.1 or another level.
@@ -756,7 +756,7 @@ class CSS21Parser(object):
             of the block, as marked by a '}'.
         :return:
             a tuple of the list of valid :class`Declaration` and a list
-            of :class:`ParseError`
+            of :exc:`ParseError`
 
         """
         # split at ';'
@@ -795,7 +795,7 @@ class CSS21Parser(object):
         :returns:
             a :class:`Declaration`
         :raises:
-            :class:`ParseError` if the tokens do not match the 'declaration'
+            :exc:`ParseError` if the tokens do not match the 'declaration'
             production of the core grammar.
 
         """
@@ -857,7 +857,7 @@ class CSS21Parser(object):
             a list of tokens with white space removed at the start and end,
             but not in the middle.
         :raises:
-            :class:`ParseError` if there is any invalid token for the 'value'
+            :exc:`ParseError` if there is any invalid token for the 'value'
             production of the core grammar.
 
         """
@@ -880,7 +880,7 @@ class CSS21Parser(object):
     def validate_block(self, tokens, context):
         """
         :raises:
-            :class:`ParseError` if there is any invalid token for the 'block'
+            :exc:`ParseError` if there is any invalid token for the 'block'
             production of the core grammar.
         :param tokens: an iterable of tokens
         :param context: a string for the 'unexpected in ...' message
@@ -896,7 +896,7 @@ class CSS21Parser(object):
     def validate_any(self, token, context):
         """
         :raises:
-            :class:`ParseError` if this is an invalid token for the
+            :exc:`ParseError` if this is an invalid token for the
             'any' production of the core grammar.
         :param token: a single token
         :param context: a string for the 'unexpected in ...' message

@@ -131,7 +131,7 @@ class CSSPage3Parser(CSS21Parser):
             A page selector. For CSS 2.1, this is 'first', 'left', 'right'
             or None.
         :raises:
-            :class:`ParseError` on invalid selectors
+            :exc:`~css21.ParseError` on invalid selectors
 
         """
         if not head:
