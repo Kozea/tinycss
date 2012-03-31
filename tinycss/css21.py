@@ -15,6 +15,7 @@ from itertools import chain, islice
 
 from .decoding import decode
 from .tokenizer import tokenize_grouped
+from .parsing import strip_whitespace
 
 
 #  stylesheet  : [ CDO | CDC | S | statement ]*;
@@ -494,10 +495,7 @@ class CSS21Parser(object):
         token = at_keyword_token
         for token in tokens:
             if token.type in '{;':
-                # Remove white space at the end of the head
-                # (but not in the middle).
-                while head and head[-1].type == 'S':
-                    head.pop()
+                head = strip_whitespace(head)
                 for head_token in head:
                     self.validate_any(head_token, 'at-rule head')
                 if token.type == '{':
@@ -507,7 +505,7 @@ class CSS21Parser(object):
                 return AtRule(at_keyword, head, body,
                               at_keyword_token.line, at_keyword_token.column)
             # Ignore white space just after the at-keyword.
-            elif head or token.type != 'S':
+            else:
                 head.append(token)
         raise ParseError(token, 'incomplete at-rule')
 
@@ -583,17 +581,11 @@ class CSS21Parser(object):
                     'expected URI or STRING for @import rule, got '
                     + head[0].type)
             uri = head[0].value
-            if len(head) == 1:
-                media = ['all']
+            media_tokens = strip_whitespace(head[1:])
+            if media_tokens:
+                media = self.parse_media(media_tokens)
             else:
-                for i, token in enumerate(head[1:], 1):
-                    if token.type != 'S':
-                        media = self.parse_media(head[i:])
-                        break
-                else:  # pragma: no cover
-                    # This is unreachable since the core parser has removed
-                    # any trailing white space in head.
-                    media = ['all']
+                media = ['all']
             if rule.body is not None:
                 raise ParseError(rule.body, "expected ';', got a block")
             return ImportRule(uri, media, rule.line, rule.column)
@@ -729,8 +721,7 @@ class CSS21Parser(object):
         for token in chain([first_token], tokens):
             if token.type == '{':
                 # Parse/validate once we’ve read the whole rule
-                while selector and selector[-1].type == 'S':
-                    selector.pop()
+                selector = strip_whitespace(selector)
                 if not selector:
                     raise ParseError(first_token, 'empty selector')
                 for selector_token in selector:
@@ -763,25 +754,23 @@ class CSS21Parser(object):
         parts = []
         this_part = []
         for token in tokens:
-            type_ = token.type
-            if type_ == ';':
-                if this_part:
-                    parts.append(this_part)
+            if token.type == ';':
+                parts.append(this_part)
                 this_part = []
-            # skip white space at the start
-            elif this_part or type_ != 'S':
+            else:
                 this_part.append(token)
-        if this_part:
-            parts.append(this_part)
+        parts.append(this_part)
 
         declarations = []
         errors = []
-        for part in parts:
-            try:
-                declarations.append(self.parse_declaration(part))
-            except ParseError as exc:
-                errors.append(exc)
-                # Skip the entire declaration
+        for tokens in parts:
+            tokens = strip_whitespace(tokens)
+            if tokens:
+                try:
+                    declarations.append(self.parse_declaration(tokens))
+                except ParseError as exc:
+                    errors.append(exc)
+                    # Skip the entire declaration
         return declarations, errors
 
     def parse_declaration(self, tokens):
@@ -819,9 +808,10 @@ class CSS21Parser(object):
         else:
             raise ParseError(token, "expected ':'")
 
-        value = self.parse_value(tokens)
+        value = strip_whitespace(list(tokens))
         if not value:
             raise ParseError(token, 'expected a property value')
+        self.validate_value(value)
         value, priority = self.parse_value_priority(value)
         return Declaration(
             property_name, value, priority, name_token.line, name_token.column)
@@ -848,34 +838,22 @@ class CSS21Parser(object):
                     break
         return original_value, None
 
-    def parse_value(self, tokens):
-        """Parse a property value and return a list of tokens.
+    def validate_value(self, tokens):
+        """Validate a property value.
 
         :param tokens:
             an iterable of tokens
-        :return:
-            a list of tokens with white space removed at the start and end,
-            but not in the middle.
         :raises:
             :exc:`ParseError` if there is any invalid token for the 'value'
             production of the core grammar.
 
         """
-        content = []
         for token in tokens:
             type_ = token.type
-            # Skip white space at the start
-            if content or type_ != 'S':
-                if type_ == '{':
-                    self.validate_block(token.content, 'property value')
-                else:
-                    self.validate_any(token, 'property value')
-                content.append(token)
-
-        # Remove white space at the end
-        while content and content[-1].type == 'S':
-            content.pop()
-        return content
+            if type_ == '{':
+                self.validate_block(token.content, 'property value')
+            else:
+                self.validate_any(token, 'property value')
 
     def validate_block(self, tokens, context):
         """
