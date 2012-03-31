@@ -88,7 +88,7 @@ def test_content(css, expected_declarations, expected_rules, expected_errors):
     assert_errors(stylesheet.errors, expected_errors)
 
     def declarations(rule):
-        return [(decl.name, list(jsonify(decl.value.content)))
+        return [(decl.name, list(jsonify(decl.value)))
                 for decl in rule.declarations]
 
     assert len(stylesheet.rules) == 1

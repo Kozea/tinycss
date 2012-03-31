@@ -212,9 +212,9 @@ class CSSSelectors3Parser(CSS21Parser):
             first_token, tokens)
         try:
             ruleset.selector_list = _parse_selector_group_tokens(
-                ruleset.selector.content)
+                ruleset.selector)
         except InvalidSelectorError as exc:
             # Invalidate the whole ruleset even if some selectors
             # in the selector group are valid.
-            raise ParseError(ruleset.selector, exc.args[0])
+            raise ParseError(ruleset, exc.args[0])
         return ruleset, errors

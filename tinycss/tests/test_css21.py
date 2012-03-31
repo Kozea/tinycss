@@ -154,8 +154,8 @@ def test_core_parser(css_source, expected_rules, expected_errors):
             list(jsonify(rule.body.content))
             if rule.body is not None else None)
         if rule.at_keyword else
-        (rule.selector.as_css, [
-            (decl.name, list(jsonify(decl.value.content)))
+        (''.join(s.as_css for s in rule.selector), [
+            (decl.name, list(jsonify(decl.value)))
             for decl in rule.declarations])
         for rule in stylesheet.rules
     ]
@@ -198,7 +198,7 @@ def test_core_parser(css_source, expected_rules, expected_errors):
 def test_parse_style_attr(css_source, expected_declarations, expected_errors):
     declarations, errors = CSS21Parser().parse_style_attr(css_source)
     assert_errors(errors, expected_errors)
-    result = [(decl.name, list(jsonify(decl.value.content)))
+    result = [(decl.name, list(jsonify(decl.value)))
               for decl in declarations]
     assert result == expected_declarations
 
@@ -231,7 +231,7 @@ def test_parse_style_attr(css_source, expected_declarations, expected_errors):
 def test_important(css_source, expected_declarations, expected_errors):
     declarations, errors = CSS21Parser().parse_style_attr(css_source)
     assert_errors(errors, expected_errors)
-    result = [(decl.name, list(jsonify(decl.value.content)), decl.priority)
+    result = [(decl.name, list(jsonify(decl.value)), decl.priority)
               for decl in declarations]
     assert result == expected_declarations
 
@@ -305,7 +305,7 @@ def test_at_page(css, expected_result, expected_errors):
         result = (
             rule.selector,
             rule.specificity,
-            [(decl.name, list(jsonify(decl.value.content)))
+            [(decl.name, list(jsonify(decl.value)))
                 for decl in rule.declarations],
         )
         assert result == expected_result
@@ -337,8 +337,8 @@ def test_at_media(css_source, expected_rules, expected_errors):
         assert rule.at_keyword == '@media'
     result = [
         (rule.media, [
-            (sub_rule.selector.as_css, [
-                (decl.name, list(jsonify(decl.value.content)))
+            (''.join(s.as_css for s in sub_rule.selector), [
+                (decl.name, list(jsonify(decl.value)))
                 for decl in sub_rule.declarations])
             for sub_rule in rule.rules
         ])

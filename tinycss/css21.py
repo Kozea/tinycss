@@ -15,7 +15,6 @@ from itertools import chain, islice
 
 from .decoding import decode
 from .tokenizer import tokenize_grouped
-from .token_data import ContainerToken
 
 
 #  stylesheet  : [ CDO | CDC | S | statement ]*;
@@ -145,8 +144,9 @@ class RuleSet(object):
 
     .. attribute:: selector
 
-        The selecor as a :class:`~tinycss.token_data.ContainerToken` object.
-        In CSS 3 terminology, this is actually a selector group.
+        The selector as a list of :class:`~.token_data.Token` or
+        :class:`~.token_data.ContainerToken`.
+        In CSS 3, this is actually called a selector group.
 
     .. attribute:: declarations
 
@@ -176,7 +176,8 @@ class Declaration(object):
 
     .. attribute:: value
 
-        The property value as a :class:`~tinycss.token_data.ContainerToken`.
+        The property value as a list of :class:`~.token_data.Token` or
+        :class:`~.token_data.ContainerToken`.
 
         The value is not parsed. UAs using tinycss may only support
         some properties or some values and tinycss does not know which.
@@ -724,27 +725,23 @@ class CSS21Parser(object):
             not for CSS 2.1 or another level.
 
         """
-        selector_parts = []
+        selector = []
         for token in chain([first_token], tokens):
             if token.type == '{':
                 # Parse/validate once we’ve read the whole rule
-                while selector_parts and selector_parts[-1].type == 'S':
-                    selector_parts.pop()
-                if not selector_parts:
+                while selector and selector[-1].type == 'S':
+                    selector.pop()
+                if not selector:
                     raise ParseError(first_token, 'empty selector')
-                for selector_token in selector_parts:
+                for selector_token in selector:
                     self.validate_any(selector_token, 'selector')
-                start = selector_parts[0] if selector_parts else token
-                selector = ContainerToken(
-                    'SELECTOR', '', '', selector_parts,
-                    start.line, start.column)
                 declarations, errors = self.parse_declaration_list(
                     token.content)
                 ruleset = RuleSet(selector, declarations,
                                   first_token.line, first_token.column)
                 return ruleset, errors
             else:
-                selector_parts.append(token)
+                selector.append(token)
         raise ParseError(token, 'no declaration block found for ruleset')
 
     def parse_declaration_list(self, tokens):
@@ -826,8 +823,6 @@ class CSS21Parser(object):
         if not value:
             raise ParseError(token, 'expected a property value')
         value, priority = self.parse_value_priority(value)
-        value = ContainerToken(
-            'VALUES', '', '', value, value[0].line, value[0].column)
         return Declaration(
             property_name, value, priority, name_token.line, name_token.column)
 
