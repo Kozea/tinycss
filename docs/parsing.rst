@@ -59,12 +59,15 @@ Parsed objects
 --------------
 
 These data structures make up the results of the various parsing methods.
-All of these objects have :obj:`line` and :obj:`column` attributes (not
-repeated every time fore brevity) that indicate where in the CSS source this
-object was read.
 
 .. autoclass:: Stylesheet()
 .. autoclass:: ParseError()
+
+.. note::
+    All subsequent objects have :obj:`line` and :obj:`column` attributes (not
+    repeated every time fore brevity) that indicate where in the CSS source
+    this object was read.
+
 .. autoclass:: RuleSet()
 .. autoclass:: ImportRule()
 .. autoclass:: MediaRule()

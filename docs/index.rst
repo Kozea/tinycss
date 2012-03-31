@@ -47,6 +47,7 @@ Documentation
     :maxdepth: 2
 
     parsing
+    css3
     extending
     hacking
     changelog

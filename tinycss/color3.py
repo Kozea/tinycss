@@ -24,8 +24,7 @@ from .tokenizer import tokenize_grouped
 class RGBA(collections.namedtuple('RGBA', ['red', 'green', 'blue', 'alpha'])):
     """An RGBA color.
 
-    A tuple of four floats in the 0..1 range: ``(r, g, b, a)``
-
+    A tuple of four floats in the 0..1 range: ``(r, g, b, a)``.
     Also has ``red``, ``green``, ``blue`` and ``alpha`` attributes to access
     the same values.
 
@@ -34,6 +33,9 @@ class RGBA(collections.namedtuple('RGBA', ['red', 'green', 'blue', 'alpha'])):
 
 def parse_color_string(css_string):
     """Parse a CSS string as a color value.
+
+    This is a convenience wrapper around :func:`parse_color` in case you
+    have a string that is not from a CSS stylesheet.
 
     :param css_string:
         An unicode string in CSS syntax.
@@ -49,19 +51,17 @@ def parse_color_string(css_string):
 def parse_color(token):
     """Parse single token as a color value.
 
-    The (deprecated) CSS2 system colors are not supported, but you can
-    easily test for them if you want as they are simple IDENT tokens.
-
     :param token:
-        A single :class:`Token` or :class:`ContainerToken`, as found eg.
-        in a property value.
+        A single :class:`~.token_data.Token` or
+        :class:`~.token_data.ContainerToken`, as found eg. in a
+        property value.
     :returns:
-        * None, if the string is not a valid CSS 3 color value.
+        * ``None``, if the token is not a valid CSS 3 color value.
           (No exception is raised.)
-        * For the currentColor keyword: the string 'currentColor'
-        * Every other values (including HSL and HSLA) is converted to RGBA
-          and returned as an :class:`RGBA` object (a 4-tuple with attribute
-          access).
+        * For the *currentColor* keyword: the string ``'currentColor'``
+        * Every other values (including keywords, HSL and HSLA) is converted
+          to RGBA and returned as an :class:`RGBA` object (a 4-tuple with
+          attribute access).
           The alpha channel is clipped to [0, 1], but R, G, or B can be
           out of range (eg. ``rgb(-51, 306, 0)`` is represented as
           ``(-.2, 1.2, 0, 1)``.)
@@ -122,7 +122,7 @@ def parse_rgb(args, alpha):
 def parse_hsl(args, alpha):
     """
     If args is a list of 1 INTEGER token and 2 PERCENTAGE tokens,
-    return RGBA values as a tuple of 3 floats in 0..1.
+    return RGB values as a tuple of 3 floats in 0..1.
     Otherwise, return None.
     """
     types = [arg.type for arg in args]

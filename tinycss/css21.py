@@ -185,7 +185,7 @@ class Declaration(object):
         unknown or unsupported properties or values, and fall back
         on any previous declaration.
 
-        :mod:`tinycss.colors3` parses color values, but other values
+        :mod:`tinycss.color3` parses color values, but other values
         will need specific parsing/validation code.
 
     .. attribute:: priority

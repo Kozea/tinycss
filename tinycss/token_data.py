@@ -197,8 +197,8 @@ class Token(object):
 
         ``IDENT``
             An identifier: a name that does not start with a digit.
-            A name is a sequence of letters, digits, escaped characters
-            and non-ASCII characters. Eg: ``margin-left``
+            A name is a sequence of letters, digits, ``_``, ``-``, escaped
+            characters and non-ASCII characters. Eg: ``margin-left``
 
         ``HASH``
             ``#`` followed immediately by a name. Eg: ``#ff8800``
@@ -234,6 +234,9 @@ class Token(object):
 
         ``DELIM``
             A single character not matched in another token. Eg: ``,``
+
+        See the source of the :mod:`.token_data` module for the precise
+        regular expressions that match various tokens.
 
         Note that other token types exist in the early tokenization steps,
         but these are ignored, are syntax errors, or are later transformed

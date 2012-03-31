@@ -24,7 +24,7 @@ COMPILED_TOKEN_INDEXES = dict(
 
 cdef class CToken:
     """A token built by the Cython speedups. Identical to
-    :class:`~tinycss.token_data.Token`.
+    :class:`~.token_data.Token`.
 
     """
     is_container = False
