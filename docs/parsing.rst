@@ -59,8 +59,8 @@ Parsed objects
 
 These data structures make up the results of the various parsing methods.
 
+.. autoclass:: tinycss.parsing.ParseError()
 .. autoclass:: Stylesheet()
-.. autoclass:: ParseError()
 
 .. note::
     All subsequent objects have :obj:`line` and :obj:`column` attributes (not

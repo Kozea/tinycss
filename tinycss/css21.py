@@ -15,7 +15,8 @@ from itertools import chain, islice
 
 from .decoding import decode
 from .tokenizer import tokenize_grouped
-from .parsing import strip_whitespace
+from .parsing import (strip_whitespace, validate_value, validate_block,
+                      validate_any, ParseError)
 
 
 #  stylesheet  : [ CDO | CDC | S | statement ]*;
@@ -48,7 +49,7 @@ class Stylesheet(object):
 
     .. attribute:: errors
 
-        A list of :exc:`ParseError`. Invalid rules and declarations
+        A list of :class:`~.parsing.ParseError`. Invalid rules and declarations
         are ignored, with the details logged in this list.
 
     .. attribute:: encoding
@@ -65,36 +66,6 @@ class Stylesheet(object):
     def __repr__(self):  # pragma: no cover
         return '<{0.__class__.__name__} {1} rules {2} errors>'.format(
             self, len(self.rules), len(self.errors))
-
-
-class ParseError(ValueError):
-    """Details about a CSS syntax error. Usually indicates that something
-    (a rule or a declaration) was ignored and will not appear as a parsed
-    object.
-
-    .. attribute:: line
-
-        Source line where the error occured.
-
-    .. attribute:: column
-
-        Column in the source line where the error occured.
-
-    .. attribute:: reason
-
-        What happend (a string).
-
-    """
-    def __init__(self, subject, reason):
-        self.line = subject.line
-        self.column = subject.column
-        self.reason = reason
-        self.msg = self.message = (
-            'Parse error at {0.line}:{0.column}, {0.reason}'.format(self))
-        super(ParseError, self).__init__(self.message)
-
-    def __repr__(self):  # pragma: no cover
-        return ('<{0.__class__.__name__}: {0.message}>'.format(self))
 
 
 class AtRule(object):
@@ -432,7 +403,7 @@ class CSS21Parser(object):
             The attribute value, as an unicode string.
         :return:
             A tuple of the list of valid :class:`Declaration` and
-            a list of :exc:`ParseError`.
+            a list of :class`~.parsing.ParseError`.
         """
         return self.parse_declaration_list(tokenize_grouped(css_source))
 
@@ -444,7 +415,7 @@ class CSS21Parser(object):
         :param tokens:
             An iterable of tokens.
         :param errors:
-            A list where to append encountered :exc:`ParseError`
+            A list where to append encountered :class`~.parsing.ParseError`
         :param context:
             Either 'stylesheet' or an at-keyword such as '@media'.
             (Some at-rules are only allowed in some contexts.)
@@ -484,8 +455,8 @@ class CSS21Parser(object):
         :return:
             An unparsed :class:`AtRule`
         :raises:
-            :exc:`ParseError` if the head is invalid for the core grammar.
-            The body is **not** validated. See :class:`AtRule`.
+            :class`~.parsing.ParseError` if the head is invalid for the core
+            grammar. The body is **not** validated. See :class:`AtRule`.
 
         """
         # CSS syntax is case-insensitive
@@ -497,7 +468,7 @@ class CSS21Parser(object):
             if token.type in '{;':
                 head = strip_whitespace(head)
                 for head_token in head:
-                    self.validate_any(head_token, 'at-rule head')
+                    validate_any(head_token, 'at-rule head')
                 if token.type == '{':
                     body = token
                 else:
@@ -531,7 +502,7 @@ class CSS21Parser(object):
             Either 'stylesheet' or an at-keyword such as '@media'.
             (Some at-rules are only allowed in some contexts.)
         :raises:
-            :exc:`ParseError` if the rule is invalid.
+            :class`~.parsing.ParseError` if the rule is invalid.
         :return:
             A parsed at-rule or None (ignore)
 
@@ -605,7 +576,7 @@ class CSS21Parser(object):
         :param tokens:
             An non-empty iterable of tokens
         :raises:
-            :exc:`ParseError` on invalid media types/queries
+            :class`~.parsing.ParseError` on invalid media types/queries
         :returns:
             For CSS 2.1, a list of media types as strings
         """
@@ -641,7 +612,7 @@ class CSS21Parser(object):
             A page selector. For CSS 2.1, this is 'first', 'left', 'right'
             or None.
         :raises:
-            :exc:`ParseError` on invalid selectors
+            :class`~.parsing.ParseError` on invalid selectors
 
         """
         if not head:
@@ -662,13 +633,13 @@ class CSS21Parser(object):
         :param body:
             The ``body`` attribute of an unparsed :class:`AtRule`.
         :param errors:
-            A list where to append encountered :exc:`ParseError`
+            A list where to append encountered :class`~.parsing.ParseError`
         :returns:
             A tuple of:
 
             * A list of :class:`Declaration`
             * A list of parsed at-rules (empty for CSS 2.1)
-            * A list of :exc:`ParseError`
+            * A list of :class`~.parsing.ParseError`
 
         """
         at_rules = []
@@ -708,10 +679,10 @@ class CSS21Parser(object):
             for one ruleset.
         :return:
             a tuple of a :class:`RuleSet` and an error list.
-            The errors are recovered :exc:`ParseError` in declarations.
+            The errors are recovered :class`~.parsing.ParseError` in declarations.
             (Parsing continues from the next declaration on such errors.)
         :raises:
-            :exc:`ParseError` if the selector is invalid for the
+            :class`~.parsing.ParseError` if the selector is invalid for the
             core grammar.
             Note a that a selector can be valid for the core grammar but
             not for CSS 2.1 or another level.
@@ -725,7 +696,7 @@ class CSS21Parser(object):
                 if not selector:
                     raise ParseError(first_token, 'empty selector')
                 for selector_token in selector:
-                    self.validate_any(selector_token, 'selector')
+                    validate_any(selector_token, 'selector')
                 declarations, errors = self.parse_declaration_list(
                     token.content)
                 ruleset = RuleSet(selector, declarations,
@@ -747,7 +718,7 @@ class CSS21Parser(object):
             of the block, as marked by a '}'.
         :return:
             a tuple of the list of valid :class`Declaration` and a list
-            of :exc:`ParseError`
+            of :class`~.parsing.ParseError`
 
         """
         # split at ';'
@@ -784,8 +755,8 @@ class CSS21Parser(object):
         :returns:
             a :class:`Declaration`
         :raises:
-            :exc:`ParseError` if the tokens do not match the 'declaration'
-            production of the core grammar.
+            :class`~.parsing.ParseError` if the tokens do not match the
+            'declaration' production of the core grammar.
 
         """
         tokens = iter(tokens)
@@ -811,7 +782,7 @@ class CSS21Parser(object):
         value = strip_whitespace(list(tokens))
         if not value:
             raise ParseError(token, 'expected a property value')
-        self.validate_value(value)
+        validate_value(value)
         value, priority = self.parse_value_priority(value)
         return Declaration(
             property_name, value, priority, name_token.line, name_token.column)
@@ -837,59 +808,3 @@ class CSS21Parser(object):
                 elif token.type != 'S':
                     break
         return original_value, None
-
-    def validate_value(self, tokens):
-        """Validate a property value.
-
-        :param tokens:
-            an iterable of tokens
-        :raises:
-            :exc:`ParseError` if there is any invalid token for the 'value'
-            production of the core grammar.
-
-        """
-        for token in tokens:
-            type_ = token.type
-            if type_ == '{':
-                self.validate_block(token.content, 'property value')
-            else:
-                self.validate_any(token, 'property value')
-
-    def validate_block(self, tokens, context):
-        """
-        :raises:
-            :exc:`ParseError` if there is any invalid token for the 'block'
-            production of the core grammar.
-        :param tokens: an iterable of tokens
-        :param context: a string for the 'unexpected in ...' message
-
-        """
-        for token in tokens:
-            type_ = token.type
-            if type_ == '{':
-                self.validate_block(token.content, context)
-            elif type_ not in (';', 'ATKEYWORD'):
-                self.validate_any(token, context)
-
-    def validate_any(self, token, context):
-        """
-        :raises:
-            :exc:`ParseError` if this is an invalid token for the
-            'any' production of the core grammar.
-        :param token: a single token
-        :param context: a string for the 'unexpected in ...' message
-
-        """
-        type_ = token.type
-        if type_ in ('FUNCTION', '(', '['):
-            for token in token.content:
-                self.validate_any(token, type_)
-        elif type_ not in ('S', 'IDENT', 'DIMENSION', 'PERCENTAGE', 'NUMBER',
-                           'INTEGER', 'URI', 'DELIM', 'STRING', 'HASH', ':',
-                           'UNICODE-RANGE'):
-            if type_ in ('}', ')', ']'):
-                adjective = 'unmatched'
-            else:
-                adjective = 'unexpected'
-            raise ParseError(token,
-                '{0} {1} token in {2}'.format(adjective, type_, context))
