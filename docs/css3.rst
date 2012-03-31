@@ -52,3 +52,9 @@ Paged Media 3
 
 .. autoclass:: CSSPage3Parser
 .. autoclass:: MarginRule
+
+
+Other CSS modules
+-----------------
+
+To add support for new CSS syntax, see :ref:`extending`.

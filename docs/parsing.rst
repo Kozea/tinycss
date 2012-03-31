@@ -37,6 +37,7 @@ is also a convenience function to do that:
 
 
 .. module:: tinycss.css21
+.. _parsing:
 
 Parsing a stylesheet
 ~~~~~~~~~~~~~~~~~~~~

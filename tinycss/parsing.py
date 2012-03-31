@@ -15,12 +15,16 @@ from __future__ import unicode_literals
 # TODO: unit tests
 
 def split_on_comma(tokens):
-    """Split a list of tokens on commas, ie ',' DELIM tokens.
+    """Split a list of tokens on commas, ie ``,`` DELIM tokens.
 
     Only "top-level" comma tokens are splitting points, not commas inside a
     function or other :class:`ContainerToken`.
 
-    :returns: A list of lists of tokens
+    :param tokens:
+        An iterable of :class:`~.token_data.Token` or
+        :class:`~.token_data.ContainerToken`.
+    :returns:
+        A list of lists of tokens
 
     """
     parts = []
@@ -64,7 +68,7 @@ def validate_value(tokens):
     :param tokens:
         an iterable of tokens
     :raises:
-        :class`ParseError` if there is any invalid token for the 'value'
+        :class:`ParseError` if there is any invalid token for the 'value'
         production of the core grammar.
 
     """
@@ -78,7 +82,7 @@ def validate_value(tokens):
 def validate_block(tokens, context):
     """
     :raises:
-        :class`ParseError` if there is any invalid token for the 'block'
+        :class:`ParseError` if there is any invalid token for the 'block'
         production of the core grammar.
     :param tokens: an iterable of tokens
     :param context: a string for the 'unexpected in ...' message
@@ -95,7 +99,7 @@ def validate_block(tokens, context):
 def validate_any(token, context):
     """
     :raises:
-        :class`ParseError` if this is an invalid token for the
+        :class:`ParseError` if this is an invalid token for the
         'any' production of the core grammar.
     :param token: a single token
     :param context: a string for the 'unexpected in ...' message

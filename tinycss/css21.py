@@ -74,17 +74,17 @@ class AtRule(object):
 
     .. attribute:: at_keyword
 
-        The normalized (lower-case) at-keyword as a string. eg. '@page'
+        The normalized (lower-case) at-keyword as a string. Eg: ``'@page'``
 
     .. attribute:: head
 
-        The "head" of the at-rule until ';' or '{': a list of tokens
-        (:class:`Token` or :class:`ContainerToken`)
+        The "head" of the at-rule until ``;`` or ``{``: a list of tokens
+        (:class:`~.token_data.Token` or :class:`~.token_data.ContainerToken`)
 
     .. attribute:: body
 
-        A block as a '{' :class:`ContainerToken`, or ``None`` if the at-rule
-        ends with ';'
+        A block as a :class:`~.token_data.ContainerToken` with
+        ``token.type == '{'``, or ``None`` if the at-rule ends with ``;``.
 
     The head was validated against the core grammar but **not** the body,
     as the body might contain declarations. In case of an error in a
@@ -92,7 +92,8 @@ class AtRule(object):
     The whole rule should not be ignored as it would be for an error
     in the head.
 
-    You are expected to parse and validate these at-rules yourself.
+    These at-rules are expected to be parsed further before reaching
+    the user API.
 
     """
     def __init__(self, at_keyword, head, body, line, column):
@@ -388,9 +389,7 @@ class CSS21Parser(object):
         tokens = tokenize_grouped(css_unicode)
         if encoding:
             tokens = _remove_at_charset(tokens)
-        errors = []
-        rules = self.parse_rules(
-            tokens, errors, context='stylesheet')
+        rules, errors = self.parse_rules(tokens, context='stylesheet')
         return Stylesheet(rules, errors, encoding)
 
     def parse_style_attr(self, css_source):
@@ -403,27 +402,27 @@ class CSS21Parser(object):
             The attribute value, as an unicode string.
         :return:
             A tuple of the list of valid :class:`Declaration` and
-            a list of :class`~.parsing.ParseError`.
+            a list of :class:`~.parsing.ParseError`.
         """
         return self.parse_declaration_list(tokenize_grouped(css_source))
 
     # API for subclasses:
 
-    def parse_rules(self, tokens, errors, context):
+    def parse_rules(self, tokens, context):
         """Parse a sequence of rules (rulesets and at-rules).
 
         :param tokens:
             An iterable of tokens.
-        :param errors:
-            A list where to append encountered :class`~.parsing.ParseError`
         :param context:
-            Either 'stylesheet' or an at-keyword such as '@media'.
-            (Some at-rules are only allowed in some contexts.)
+            Either ``'stylesheet'`` or an at-keyword such as ``'@media'``.
+            (Most at-rules are only allowed in some contexts.)
         :return:
-            A list of parsed rules.
+            A tuple of a list of parsed rules and a list of
+            :class:`~.parsing.ParseError`.
 
         """
         rules = []
+        errors = []
         tokens = iter(tokens)
         for token in tokens:
             if token.type not in ('S', 'CDO', 'CDC'):
@@ -440,10 +439,10 @@ class CSS21Parser(object):
                 except ParseError as exc:
                     errors.append(exc)
                     # Skip the entire rule
-        return rules
+        return rules, errors
 
     def read_at_rule(self, at_keyword_token, tokens):
-        """Read an at-rule.
+        """Read an at-rule from a token stream.
 
         :param at_keyword_token:
             The ATKEYWORD token that starts this at-rule
@@ -453,9 +452,9 @@ class CSS21Parser(object):
             An iterator of subsequent tokens. Will be consumed just enough
             for one at-rule.
         :return:
-            An unparsed :class:`AtRule`
+            An unparsed :class:`AtRule`.
         :raises:
-            :class`~.parsing.ParseError` if the head is invalid for the core
+            :class:`~.parsing.ParseError` if the head is invalid for the core
             grammar. The body is **not** validated. See :class:`AtRule`.
 
         """
@@ -486,25 +485,23 @@ class CSS21Parser(object):
         Subclasses that override this method must use ``super()`` and
         pass its return value for at-rules they do not know.
 
-        In :class:`CoreParser`, this method only handles @charset rules
-        and raises "unknown at-rule" for everything else.
-        (@import, @media and @page are in :class`CSS21Parser`.)
+        In CSS 2.1, this method handles @charset, @import, @media and @page
+        rules.
 
         :param rule:
             An unparsed :class:`AtRule`.
         :param previous_rules:
             The list of at-rules and rulesets that have been parsed so far
-            in this context. This method can append to this list
-            (to add a valid, parsed at-rule) or inspect it to decide if
-            the rule is valid. (For example, @import rules are only allowed
+            in this context. This list can be used to decide if the current
+            rule is valid. (For example, @import rules are only allowed
             before anything but a @charset rule.)
         :param context:
-            Either 'stylesheet' or an at-keyword such as '@media'.
-            (Some at-rules are only allowed in some contexts.)
+            Either ``'stylesheet'`` or an at-keyword such as ``'@media'``.
+            (Most at-rules are only allowed in some contexts.)
         :raises:
-            :class`~.parsing.ParseError` if the rule is invalid.
+            :class:`~.parsing.ParseError` if the rule is invalid.
         :return:
-            A parsed at-rule or None (ignore)
+            A parsed at-rule
 
         """
         if rule.at_keyword == '@page':
@@ -514,7 +511,10 @@ class CSS21Parser(object):
             if rule.body is None:
                 raise ParseError(rule,
                     'invalid {0} rule: missing block'.format(rule.at_keyword))
-            declarations, at_rules = self.parse_page_block(rule.body, errors)
+            declarations, at_rules, rule_errors = \
+                self.parse_declarations_and_at_rules(
+                    rule.body.content, '@page')
+            errors.extend(rule_errors)
             return PageRule(selector, specificity, declarations, at_rules,
                             rule.line, rule.column)
 
@@ -527,8 +527,8 @@ class CSS21Parser(object):
             if rule.body is None:
                 raise ParseError(rule,
                     'invalid {0} rule: missing block'.format(rule.at_keyword))
-            rules = self.parse_rules(
-                rule.body.content, errors, '@media')
+            rules, rule_errors = self.parse_rules(rule.body.content, '@media')
+            errors.extend(rule_errors)
             return MediaRule(media, rules, rule.line, rule.column)
 
         elif rule.at_keyword == '@import':
@@ -576,7 +576,7 @@ class CSS21Parser(object):
         :param tokens:
             An non-empty iterable of tokens
         :raises:
-            :class`~.parsing.ParseError` on invalid media types/queries
+            :class:`~.parsing.ParseError` on invalid media types/queries
         :returns:
             For CSS 2.1, a list of media types as strings
         """
@@ -603,54 +603,63 @@ class CSS21Parser(object):
                 if token.type != 'S':
                     break
 
-    def parse_page_selector(self, head):
+    def parse_page_selector(self, tokens):
         """Parse an @page selector.
 
-        :param head:
-            The ``head`` attribute of an unparsed :class:`AtRule`.
+        :param tokens:
+            An iterable of token, typically from the  ``head`` attribute of
+            an unparsed :class:`AtRule`.
         :returns:
-            A page selector. For CSS 2.1, this is 'first', 'left', 'right'
-            or None.
+            A page selector. For CSS 2.1, this is ``'first'``, ``'left'``,
+            ``'right'`` or ``None``.
         :raises:
-            :class`~.parsing.ParseError` on invalid selectors
+            :class:`~.parsing.ParseError` on invalid selectors
 
         """
-        if not head:
+        if not tokens:
             return None, (0, 0)
-        if (len(head) == 2 and head[0].type == ':'
-                and head[1].type == 'IDENT'):
-            pseudo_class = head[1].value
+        if (len(tokens) == 2 and tokens[0].type == ':'
+                and tokens[1].type == 'IDENT'):
+            pseudo_class = tokens[1].value
             specificity = {
                 'first': (1, 0), 'left': (0, 1), 'right': (0, 1),
             }.get(pseudo_class)
             if specificity:
                 return pseudo_class, specificity
-        raise ParseError(head[0], 'invalid @page selector')
+        raise ParseError(tokens[0], 'invalid @page selector')
 
-    def parse_page_block(self, body, errors):
-        """Parse the body of an @page rule.
+    def parse_declarations_and_at_rules(self, tokens, context):
+        """Parse a mixed list of declarations and at rules, as found eg.
+        in the body of an @page rule.
 
-        :param body:
-            The ``body`` attribute of an unparsed :class:`AtRule`.
-        :param errors:
-            A list where to append encountered :class`~.parsing.ParseError`
+        Note that to add supported at-rules inside @page,
+        :class:`~.page3.CSSPage3Parser` extends :meth:`parse_at_rule`,
+        not this method.
+
+        :param tokens:
+            An iterable of token, typically from the  ``body`` attribute of
+            an unparsed :class:`AtRule`.
+        :param context:
+            An at-keyword such as ``'@page'``.
+            (Most at-rules are only allowed in some contexts.)
         :returns:
             A tuple of:
 
             * A list of :class:`Declaration`
             * A list of parsed at-rules (empty for CSS 2.1)
-            * A list of :class`~.parsing.ParseError`
+            * A list of :class:`~.parsing.ParseError`
 
         """
         at_rules = []
         declarations = []
-        tokens = iter(body.content)
+        errors = []
+        tokens = iter(tokens)
         for token in tokens:
             if token.type == 'ATKEYWORD':
                 try:
                     rule = self.read_at_rule(token, tokens)
                     result = self.parse_at_rule(
-                        rule, at_rules, errors, '@page')
+                        rule, at_rules, errors, context)
                     at_rules.append(result)
                 except ParseError as err:
                     errors.append(err)
@@ -665,7 +674,7 @@ class CSS21Parser(object):
                             self.parse_declaration(declaration_tokens))
                     except ParseError as err:
                         errors.append(err)
-        return declarations, at_rules
+        return declarations, at_rules, errors
 
     def parse_ruleset(self, first_token, tokens):
         """Parse a ruleset: a selector followed by declaration block.
@@ -679,10 +688,10 @@ class CSS21Parser(object):
             for one ruleset.
         :return:
             a tuple of a :class:`RuleSet` and an error list.
-            The errors are recovered :class`~.parsing.ParseError` in declarations.
+            The errors are recovered :class:`~.parsing.ParseError` in declarations.
             (Parsing continues from the next declaration on such errors.)
         :raises:
-            :class`~.parsing.ParseError` if the selector is invalid for the
+            :class:`~.parsing.ParseError` if the selector is invalid for the
             core grammar.
             Note a that a selector can be valid for the core grammar but
             not for CSS 2.1 or another level.
@@ -707,18 +716,18 @@ class CSS21Parser(object):
         raise ParseError(token, 'no declaration block found for ruleset')
 
     def parse_declaration_list(self, tokens):
-        """Parse a ';' separated declaration list.
+        """Parse a ``;`` separated declaration list.
 
-        If you have a block that contains declarations but not only
-        (like ``@page`` in CSS 3 Paged Media), you need to extract them
-        yourself and use :func:`parse_declaration` directly.
+        You may want to use :meth:`parse_declarations_and_at_rules` (or
+        some other method that uses :func:`parse_declaration` directly)
+        instead if you have not just declarations in the same context.
 
         :param tokens:
             an iterable of tokens. Should stop at (before) the end
-            of the block, as marked by a '}'.
+            of the block, as marked by ``}``.
         :return:
-            a tuple of the list of valid :class`Declaration` and a list
-            of :class`~.parsing.ParseError`
+            a tuple of the list of valid :class:`Declaration` and a list
+            of :class:`~.parsing.ParseError`
 
         """
         # split at ';'
@@ -749,13 +758,14 @@ class CSS21Parser(object):
 
         :param tokens:
             an iterable of at least one token. Should stop at (before)
-            the end of the declaration, as marked by a ';' or '}'.
-            Empty declarations (ie. consecutive ';' with only white space
-            in-between) should skipped and not passed to this function.
+            the end of the declaration, as marked by a ``;`` or ``}``.
+            Empty declarations (ie. consecutive ``;`` with only white space
+            in-between) should be skipped earlier and not passed to
+            this method.
         :returns:
             a :class:`Declaration`
         :raises:
-            :class`~.parsing.ParseError` if the tokens do not match the
+            :class:`~.parsing.ParseError` if the tokens do not match the
             'declaration' production of the core grammar.
 
         """
@@ -787,10 +797,16 @@ class CSS21Parser(object):
         return Declaration(
             property_name, value, priority, name_token.line, name_token.column)
 
-    def parse_value_priority(self, original_value):
-        """Take a list of tokens and separate any !important marker.
+    def parse_value_priority(self, tokens):
+        """Separate any ``!important`` marker at the end of a property value.
+
+        :param tokens:
+            A list of tokens for the property value.
+        :returns:
+            A tuple of the actual property value (a list of tokens)
+            and the :attr:`~Declaration.priority`.
         """
-        value = list(original_value)
+        value = list(tokens)
         # Walk the token list from the end
         token = value.pop()
         if token.type == 'IDENT' and token.value == 'important':
@@ -807,4 +823,4 @@ class CSS21Parser(object):
                 # Skip white space between '!' and 'important'
                 elif token.type != 'S':
                     break
-        return original_value, None
+        return tokens, None

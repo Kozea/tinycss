@@ -223,6 +223,9 @@ class CSSSelectors3Parser(CSS21Parser):
     ``selector_list`` attribute set to the list of parsed :class:`Selector`
     objects for this ruleset.
 
+    Also, whole rulesets are ignored (with a logged
+    :class:`~.parsing.ParseError`) if they have an invalid selector.
+
     """
     def parse_ruleset(self, first_token, tokens):
         ruleset, errors = super(CSSSelectors3Parser, self).parse_ruleset(
