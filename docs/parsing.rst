@@ -44,9 +44,11 @@ Parsing a stylesheet
 Parser classes have three different methods to parse CSS stylesheet,
 depending on whether you have a file, a byte string, or an Unicode string.
 
-.. automethod:: CSS21Parser.parse_stylesheet_file
-.. automethod:: CSS21Parser.parse_stylesheet_bytes
-.. automethod:: CSS21Parser.parse_stylesheet
+.. autoclass:: CSS21Parser
+
+    .. automethod:: parse_stylesheet_file
+    .. automethod:: parse_stylesheet_bytes
+    .. automethod:: parse_stylesheet
 
 
 Parsing a ``style`` attribute

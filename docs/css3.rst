@@ -45,4 +45,5 @@ a function that can help parse property values, as
 Paged Media 3
 -------------
 
-TODO
+.. autoclass:: CSSPage3Parser
+.. autoclass:: MarginRule

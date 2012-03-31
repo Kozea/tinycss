@@ -20,15 +20,36 @@ class MarginRule(object):
     """A parsed at-rule for margin box.
 
     .. attribute:: at_keyword
-        One of the 16 at-keywords for margin boxes, eg. ``'@top-left'``
+
+        One of the 16 following strings:
+
+        * ``@top-left-corner``
+        * ``@top-left``
+        * ``@top-center``
+        * ``@top-right``
+        * ``@top-right-corner``
+        * ``@bottom-left-corner``
+        * ``@bottom-left``
+        * ``@bottom-center``
+        * ``@bottom-right``
+        * ``@bottom-right-corner``
+        * ``@left-top``
+        * ``@left-middle``
+        * ``@left-bottom``
+        * ``@right-top``
+        * ``@right-middle``
+        * ``@right-bottom``
 
     .. attribute:: declarations
-        A list of :class:`PropertyDeclaration`
+
+        A list of :class:`~.css21.Declaration`
 
     .. attribute:: line
+
         Source line where this was read.
 
     .. attribute:: column
+
         Source column where this was read.
 
     """
@@ -41,13 +62,18 @@ class MarginRule(object):
 
 
 class CSSPage3Parser(CSS21Parser):
-    """Extend the parser for CSS 3 Paged Media syntax.
+    """Extend :class:`~.css21.CSS21Parser` for `CSS 3 Paged Media`_ syntax.
 
-    Compared to CSS 2.1, the ``selector`` and ``at_rules`` attributes of
-    :class:`PageRule` objects are modified:
+    .. _CSS 3 Paged Media: http://dev.w3.org/csswg/css3-page/
 
-    ``selector``, instead of a single string, is a tuple of the page name
-    and the pseudo class. Each of these may be a ``None`` or a string.
+    Compared to CSS 2.1, the ``at_rules`` and ``selector`` attributes of
+    :class:`~.css21.PageRule` objects are modified:
+
+    * ``at_rules`` is not always empty, it is a list of :class:`MarginRule`
+      objects.
+
+    * ``selector``, instead of a single string, is a tuple of the page name
+      and the pseudo class. Each of these may be a ``None`` or a string.
 
     ======================== ======================
     CSS                      Parsed selector
@@ -57,9 +83,6 @@ class CSSPage3Parser(CSS21Parser):
     ``@page chapter {}``     ``('chapter', None)``
     ``@page table:right {}`` ``('table', 'right')``
     ======================== ======================
-
-    ``at_rules`` is not always empty, it is a list of :class:`MarginRule`
-    objects.
 
     """
 

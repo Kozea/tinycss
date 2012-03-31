@@ -15,3 +15,10 @@ div.document ul ul {
 table.field-list p, table.field-list ul {
     margin-bottom: .5em;
 }
+table {
+    border-collapse: collapse;
+    margin-bottom: 1em;
+}
+table.docutils td, table.docutils th {
+    padding: .2em .5em;
+}
