@@ -290,9 +290,6 @@ class Token(object):
         return ('<Token {0.type} at {0.line}:{0.column} {0.value!r}{1}>'
                 .format(self, self.unit or ''))
 
-    # For debugging:
-    pretty = __repr__
-
 
 class ContainerToken(object):
     """A token that contains other (nested) tokens.
@@ -357,14 +354,6 @@ class ContainerToken(object):
 
     def __repr__(self):  # pragma: no cover
         return (self.format_string + ' {0.content}').format(self)
-
-    def pretty(self):  # pragma: no cover
-        """Return an indented string representation for debugging"""
-        lines = [self.format_string.format(self)]
-        for token in self.content:
-            for line in token.pretty().splitlines():
-                lines.append('    ' + line)
-        return '\n'.join(lines)
 
     # Sequence-like API (not the full collections.Sequence ABC, though)
 

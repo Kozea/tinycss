@@ -44,9 +44,6 @@ cdef class CToken:
         return ('<Token {0.type} at {0.line}:{0.column} {0.value!r}{1}>'
                 .format(self, self.unit or ''))
 
-    # For debugging:
-    pretty = __repr__
-
 
 def tokenize_flat(css_source, int ignore_comments=1):
     """

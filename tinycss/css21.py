@@ -66,12 +66,6 @@ class Stylesheet(object):
         return '<{0.__class__.__name__} {1} rules {2} errors>'.format(
             self, len(self.rules), len(self.errors))
 
-    def pretty(self):  # pragma: no cover
-        """Return an indented string representation for debugging"""
-        lines = [rule.pretty() for rule in self.rules] + [
-                 e.message for e in self.errors]
-        return '\n'.join(lines)
-
 
 class ParseError(ValueError):
     """Details about a CSS syntax error. Usually indicates that something
@@ -141,18 +135,6 @@ class AtRule(object):
         return ('<{0.__class__.__name__} {0.line}:{0.column} {0.at_keyword}>'
                 .format(self))
 
-    def pretty(self):  # pragma: no cover
-        """Return an indented string representation for debugging"""
-        lines = [self.at_keyword]
-        for token in self.head:
-            for line in token.pretty().splitlines():
-                lines.append('    ' + line)
-        if self.body is not None:
-            lines.append(self.body.pretty())
-        else:
-            lines.append(';')
-        return '\n'.join(lines)
-
 
 class RuleSet(object):
     """A ruleset.
@@ -171,6 +153,9 @@ class RuleSet(object):
         The list of :class:`Declaration`, in source order.
 
     """
+
+    at_keyword = None
+
     def __init__(self, selector, declarations, line, column):
         self.selector = selector
         self.declarations = declarations
@@ -180,17 +165,6 @@ class RuleSet(object):
     def __repr__(self):  # pragma: no cover
         return ('<{0.__class__.__name__} at {0.line}:{0.column}'
                 ' {0.selector.as_css}>'.format(self))
-
-    def pretty(self):  # pragma: no cover
-        """Return an indented string representation for debugging"""
-        lines = [self.selector.pretty(), '{']
-        for declaration in self.declarations:
-            for line in declaration.pretty().splitlines():
-                lines.append('    ' + line)
-        lines.append('}')
-        return '\n'.join(lines)
-
-    at_keyword = None
 
 
 class Declaration(object):
@@ -229,14 +203,6 @@ class Declaration(object):
         priority = ' !' + self.priority if self.priority else ''
         return ('<{0.__class__.__name__} {0.line}:{0.column}'
                 ' {0.name}: {0.value.as_css}{1}>'.format(self, priority))
-
-    def pretty(self):  # pragma: no cover
-        """Return an indented string representation for debugging"""
-        lines = [self.name + ':']
-        for token in self.value.content:
-            for line in token.pretty().splitlines():
-                lines.append('    ' + line)
-        return '\n'.join(lines)
 
 
 class PageRule(object):
