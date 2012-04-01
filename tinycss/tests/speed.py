@@ -81,14 +81,28 @@ def parse_cssutils():
 
 
 def check_consistency():
+    result = parse_python()
     #import pprint
-    #pprint.pprint(parse_python())
-    result = parse_cython()
+    #pprint.pprint(result)
     assert len(result) > 0
-    assert parse_python() == result
+    if tokenizer.cython_tokenize_flat:
+        assert parse_cython() == result
     assert parse_cssutils() == result
     version = '.'.join(map(str, sys.version_info[:3]))
     print('Python {}, consistency OK.'.format(version))
+
+
+def warm_up():
+    is_pypy = hasattr(sys, 'pypy_translation_info')
+    if is_pypy:
+        print('Warming up for PyPy...')
+        for i in range(80):
+            for i in range(10):
+                parse_python()
+                parse_cssutils()
+            sys.stdout.write('.')
+            sys.stdout.flush()
+        sys.stdout.write('\n')
 
 
 def time(function):
@@ -98,8 +112,14 @@ def time(function):
 
 
 def run():
-    data_set = [
-        ('tinycss + speedups      ', parse_cython),
+    if tokenizer.cython_tokenize_flat:
+        data_set = [
+            ('tinycss + speedups      ', parse_cython),
+        ]
+    else:
+        print('Speedups are NOT available.')
+        data_set = []
+    data_set += [
         ('tinycss WITHOUT speedups', parse_python),
         ('cssutils                ', parse_cssutils),
     ]
@@ -113,4 +133,5 @@ def run():
 
 if __name__ == '__main__':
     check_consistency()
+    warm_up()
     run()
