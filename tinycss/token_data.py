@@ -163,7 +163,6 @@ def _init():
         (' \t\r\n\f', ['S']),
         ('uU', ['URI', 'BAD_URI', 'UNICODE-RANGE']),
         # \ is an escape outside of another token
-        # \240 is octal for 160: tokens for all nonascii
         (string.ascii_letters + '\\_-' + unichr(160), ['FUNCTION', 'IDENT']),
         (string.digits + '.+-', ['DIMENSION', 'PERCENTAGE', 'NUMBER']),
         ('@', ['ATKEYWORD']),
