@@ -89,22 +89,28 @@ def tokenize_flat(css_source, int ignore_comments=1):
 
     tokens = []
     while pos < source_len:
-        for type_ in xrange(n_tokens):
-            type_name, regexp = compiled_tokens[type_]
-            match = regexp(css_source, pos)
-            if match:
-                # First match is the longest. See comments on TOKENS above.
-                css_value = match.group()
-                break
+        char = css_source[pos]
+        if char in ':;{}()[]':
+            type_ = -1  # not parsed further anyway
+            type_name = char
+            css_value = char
         else:
-            # No match.
-            # "Any other character not matched by the above rules,
-            #  and neither a single nor a double quote."
-            # ... but quotes at the start of a token are always matched
-            # by STRING or BAD_STRING. So DELIM is any single character.
-            type_ = DELIM
-            type_name = 'DELIM'
-            css_value = css_source[pos]
+            for type_ in xrange(n_tokens):
+                type_name, regexp = compiled_tokens[type_]
+                match = regexp(css_source, pos)
+                if match:
+                    # First match is the longest. See comments on TOKENS above.
+                    css_value = match.group()
+                    break
+            else:
+                # No match.
+                # "Any other character not matched by the above rules,
+                #  and neither a single nor a double quote."
+                # ... but quotes at the start of a token are always matched
+                # by STRING or BAD_STRING. So DELIM is any single character.
+                type_ = DELIM
+                type_name = 'DELIM'
+                css_value = char
         length = len(css_value)
         next_pos = pos + length
 

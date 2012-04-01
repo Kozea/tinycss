@@ -118,29 +118,26 @@ COMPILED_TOKEN_INDEXES = {}  # {name: i}  helper for the C speedups
 def _init():
     """Import-time initialization."""
     COMPILED_MACROS.clear()
-    # Formatter is broken on PyPy: https://bugs.pypy.org/issue1081
-#    expand_macros = functools.partial(
-#        Formatter().vformat, args=(), kwargs=COMPILED_MACROS)
-
     for line in MACROS.splitlines():
         if line.strip():
             name, value = line.split('\t')
             COMPILED_MACROS[name.strip()] = '(?:%s)' \
                 % value.format(**COMPILED_MACROS)
 
-    del COMPILED_TOKEN_REGEXPS[:]
-    for line in TOKENS.splitlines():
-        if line.strip():
-            name, value = line.split('\t')
-            COMPILED_TOKEN_REGEXPS.append((
-                name.strip(),
-                re.compile(
-                    value.format(**COMPILED_MACROS),
-                    # Case-insensitive when matching eg. uRL(foo)
-                    # but preserve the case in extracted groups
-                    re.I
-                ).match
-            ))
+    COMPILED_TOKEN_REGEXPS[:] = (
+        (
+            name.strip(),
+            re.compile(
+                value.format(**COMPILED_MACROS),
+                # Case-insensitive when matching eg. uRL(foo)
+                # but preserve the case in extracted groups
+                re.I
+            ).match
+        )
+        for line in TOKENS.splitlines()
+        if line.strip()
+        for name, value in [line.split('\t')]
+    )
 
     COMPILED_TOKEN_INDEXES.clear()
     for i, (name, regexp) in enumerate(COMPILED_TOKEN_REGEXPS):
