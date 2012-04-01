@@ -62,6 +62,22 @@ def strip_whitespace(tokens):
     return tokens
 
 
+def remove_whitespace(tokens):
+    """Remove any top-level whitespace in a token list.
+
+    Whitespace tokens inside recursive :class:`~.token_data.ContainerToken`
+    are preserved.
+
+    :param tokens:
+        A list of :class:`~.token_data.Token` or
+        :class:`~.token_data.ContainerToken`.
+    :return:
+        A new sub-sequence of the list.
+
+    """
+    return [token for token in tokens if token.type != 'S']
+
+
 def validate_value(tokens):
     """Validate a property value.
 
