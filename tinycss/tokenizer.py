@@ -19,7 +19,7 @@ from . import token_data
 
 def tokenize_flat(css_source, ignore_comments=True,
     # Make these local variable to avoid global lookups in the loop
-    compiled_tokens=token_data.COMPILED_TOKEN_REGEXPS,
+    tokens_dispatch=token_data.TOKEN_DISPATCH,
     unicode_unescape=token_data.UNICODE_UNESCAPE,
     newline_unescape=token_data.NEWLINE_UNESCAPE,
     simple_unescape=token_data.SIMPLE_UNESCAPE,
@@ -53,7 +53,8 @@ def tokenize_flat(css_source, ignore_comments=True,
             type_ = char
             css_value = char
         else:
-            for type_, regexp in compiled_tokens:
+            codepoint = min(ord(char), 160)
+            for _index, type_, regexp in tokens_dispatch[codepoint]:
                 match = regexp(css_source, pos)
                 if match:
                     # First match is the longest. See comments on TOKENS above.

@@ -101,7 +101,7 @@ def run():
     data_set = [
         ('tinycss + speedups      ', parse_cython),
         ('tinycss WITHOUT speedups', parse_python),
-#        ('cssutils                ', parse_cssutils),
+        ('cssutils                ', parse_cssutils),
     ]
     label, function = data_set.pop(0)
     ref = time(function)

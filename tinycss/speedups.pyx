@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 
 from .token_data import (
     COMPILED_TOKEN_REGEXPS, UNICODE_UNESCAPE, NEWLINE_UNESCAPE,
-    SIMPLE_UNESCAPE, FIND_NEWLINES)
+    SIMPLE_UNESCAPE, FIND_NEWLINES, TOKEN_DISPATCH)
 
 
 COMPILED_TOKEN_INDEXES = dict(
@@ -57,6 +57,7 @@ def tokenize_flat(css_source, int ignore_comments=1):
 
     """
     # Make these local variable to avoid global lookups in the loop
+    tokens_dispatch = TOKEN_DISPATCH
     compiled_token_indexes = COMPILED_TOKEN_INDEXES
     compiled_tokens = COMPILED_TOKEN_REGEXPS
     unicode_unescape = UNICODE_UNESCAPE
@@ -95,8 +96,8 @@ def tokenize_flat(css_source, int ignore_comments=1):
             type_name = char
             css_value = char
         else:
-            for type_ in xrange(n_tokens):
-                type_name, regexp = compiled_tokens[type_]
+            codepoint = min(ord(char), 160)
+            for type_, type_name, regexp in tokens_dispatch[codepoint]:
                 match = regexp(css_source, pos)
                 if match:
                     # First match is the longest. See comments on TOKENS above.

@@ -15,6 +15,7 @@ import re
 import sys
 import operator
 import functools
+import string
 
 
 # * Raw strings with the r'' notation are used so that \ do not need
@@ -115,6 +116,20 @@ COMPILED_TOKEN_REGEXPS = []  # [(name, regexp.match)]  ordered
 COMPILED_TOKEN_INDEXES = {}  # {name: i}  helper for the C speedups
 
 
+# Indexed by codepoint value of the first character of a token.
+# Codepoints >= 160 (aka nonascii) all use the index 160.
+# values are (i, name, regexp.match)
+TOKEN_DISPATCH = []
+
+
+try:
+    unichr
+except NameError:  # pragma: no cover
+    # Python 3
+    unichr = chr
+    unicode = str
+
+
 def _init():
     """Import-time initialization."""
     COMPILED_MACROS.clear()
@@ -143,15 +158,36 @@ def _init():
     for i, (name, regexp) in enumerate(COMPILED_TOKEN_REGEXPS):
         COMPILED_TOKEN_INDEXES[name] = i
 
+    dispatch = [[] for i in range(161)]
+    for chars, names in [
+        (' \t\r\n\f', ['S']),
+        ('uU', ['URI', 'BAD_URI', 'UNICODE-RANGE']),
+        # \ is an escape outside of another token
+        # \240 is octal for 160: tokens for all nonascii
+        (string.ascii_letters + '\\_-' + unichr(160), ['FUNCTION', 'IDENT']),
+        (string.digits + '.+-', ['DIMENSION', 'PERCENTAGE', 'NUMBER']),
+        ('@', ['ATKEYWORD']),
+        ('#', ['HASH']),
+        ('\'"', ['STRING', 'BAD_STRING']),
+        ('/', ['COMMENT', 'BAD_COMMENT']),
+        ('<', ['CDO']),
+        ('-', ['CDC']),
+    ]:
+        for char in chars:
+            dispatch[ord(char)].extend(names)
+    for char in ':;{}()[]':
+        dispatch[ord(char)] = [char]
+
+    TOKEN_DISPATCH[:] = (
+        [
+            (index,) + COMPILED_TOKEN_REGEXPS[index]
+            for name in names
+            for index in [COMPILED_TOKEN_INDEXES[name]]
+        ]
+        for names in dispatch
+    )
+
 _init()
-
-
-try:
-    unichr
-except NameError:  # pragma: no cover
-    # Python 3
-    unichr = chr
-    unicode = str
 
 
 def _unicode_replace(match, int=int, unichr=unichr, maxunicode=sys.maxunicode):
