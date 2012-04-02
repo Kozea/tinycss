@@ -9,6 +9,11 @@ They do so by sub-classing :class:`.css21.CSS21Parser` and overriding/extending
 some of its methods. If fact, the parser is made of methods in a class
 (rather than a set of functions) solely to enable this kind of sub-classing.
 
+tinycss is designed to enable you to have parser subclasses outside of
+tinycss, without monkey-patching. If however the syntax you added is for a
+W3C specification, consider including your subclass in a new tinycss module
+and send a pull request: see :ref:`hacking`.
+
 
 .. currentmodule:: tinycss.css21
 
