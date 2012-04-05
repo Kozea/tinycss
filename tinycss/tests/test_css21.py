@@ -98,7 +98,11 @@ def test_at_rules(css_source, expected_rules, expected_errors):
     ('@import "foo.css"/**/;', [
         ('@import', [('STRING', 'foo.css')], None)], []),
 
-    ('@import "foo.css"/**/', [], ['incomplete at-rule']),
+    ('@import "foo.css"/**/', [
+        ('@import', [('STRING', 'foo.css')], None)], []),
+
+    ('@import "foo.css', [
+        ('@import', [('STRING', 'foo.css')], None)], []),
 
     ('{}', [], ['empty selector']),
 

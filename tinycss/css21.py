@@ -466,19 +466,17 @@ class CSS21Parser(object):
         token = at_keyword_token
         for token in tokens:
             if token.type in '{;':
-                head = strip_whitespace(head)
-                for head_token in head:
-                    validate_any(head_token, 'at-rule head')
-                if token.type == '{':
-                    body = token.content
-                else:
-                    body = None
-                return AtRule(at_keyword, head, body,
-                              at_keyword_token.line, at_keyword_token.column)
+                break
             # Ignore white space just after the at-keyword.
             else:
                 head.append(token)
-        raise ParseError(token, 'incomplete at-rule')
+        # On unexpected end of stylesheet, pretend that a ';' was there
+        head = strip_whitespace(head)
+        for head_token in head:
+            validate_any(head_token, 'at-rule head')
+        body = token.content if token.type == '{' else None
+        return AtRule(at_keyword, head, body,
+                      at_keyword_token.line, at_keyword_token.column)
 
     def parse_at_rule(self, rule, previous_rules, errors, context):
         """Parse an at-rule.
