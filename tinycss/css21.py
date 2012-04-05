@@ -809,7 +809,7 @@ class CSS21Parser(object):
         value = list(tokens)
         # Walk the token list from the end
         token = value.pop()
-        if token.type == 'IDENT' and token.value == 'important':
+        if token.type == 'IDENT' and token.value.lower() == 'important':
             while value:
                 token = value.pop()
                 if token.type == 'DELIM' and token.value == '!':

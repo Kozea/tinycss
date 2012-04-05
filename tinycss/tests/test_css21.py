@@ -219,7 +219,7 @@ def test_parse_style_attr(css_source, expected_declarations, expected_errors):
         [('a', [('INTEGER', 1)], 'important'), ('b', [('INTEGER', 2)], None)],
         []),
 
-    ('a:1!\t important; b:2',
+    ('a:1!\t Im\\50 O\\RTant; b:2',
         [('a', [('INTEGER', 1)], 'important'), ('b', [('INTEGER', 2)], None)],
         []),
 
