@@ -12,7 +12,7 @@
 import sys
 
 
-VERSION = '0.1dev'
+VERSION = '0.1'
 
 
 def make_parser(*base_classes, **kwargs):

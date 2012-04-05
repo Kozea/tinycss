@@ -1,1 +1,1 @@
-include README.rst CHANGES tinycss/speedups.c
+include README.rst CHANGES LICENSE tox.ini .coveragerc tinycss/speedups.c
