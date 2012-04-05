@@ -114,7 +114,7 @@ def test_at_rules(css_source, expected_rules, expected_errors):
     ('foo @page {} bar {}', [('bar', [])],
         ['unexpected ATKEYWORD token in selector']),
 
-    ('foo { content: "unclosed string;\n color:red; ; margin/**/: 2cm; }',
+    ('foo { content: "unclosed string;\n color:red; ; margin/**/\n: 2cm; }',
         [('foo', [('margin', [('DIMENSION', 2)])])],
         ['unexpected BAD_STRING token in property value']),
 
@@ -151,10 +151,10 @@ def test_core_parser(css_source, expected_rules, expected_errors):
     assert_errors(stylesheet.errors, expected_errors)
     result = [
         (rule.at_keyword, list(jsonify(rule.head)),
-            list(jsonify(rule.body.content))
+            list(jsonify(rule.body))
             if rule.body is not None else None)
         if rule.at_keyword else
-        (''.join(s.as_css for s in rule.selector), [
+        (rule.selector.as_css(), [
             (decl.name, list(jsonify(decl.value)))
             for decl in rule.declarations])
         for rule in stylesheet.rules
@@ -318,9 +318,10 @@ def test_at_page(css, expected_result, expected_errors):
     ('@media all;', [], ['invalid @media rule: missing block']),
     ('@media  {}', [], ['expected media types for @media']),
     ('@media 4 {}', [], ['expected a media type, got INTEGER']),
-    ('@media , screen {}', [], ['expected a media type, got DELIM']),
+    ('@media , screen {}', [], ['expected a media type']),
     ('@media screen, {}', [], ['expected a media type']),
-    ('@media screen print {}', [], ['expected a comma, got S']),
+    ('@media screen print {}', [],
+        ['expected a media type, got IDENT, IDENT']),
 
     ('@media all { @page { a: 1 } @media; @import; foo { a: 1 } }',
         [(['all'], [('foo', [('a', [('INTEGER', 1)])])])],
@@ -337,7 +338,7 @@ def test_at_media(css_source, expected_rules, expected_errors):
         assert rule.at_keyword == '@media'
     result = [
         (rule.media, [
-            (''.join(s.as_css for s in sub_rule.selector), [
+            (sub_rule.selector.as_css(), [
                 (decl.name, list(jsonify(decl.value)))
                 for decl in sub_rule.declarations])
             for sub_rule in rule.rules

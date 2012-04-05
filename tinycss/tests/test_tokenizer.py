@@ -277,7 +277,7 @@ def test_token_serialize_css(tokenize, css_source):
         pytest.skip('Speedups not available')
     for _regroup in [regroup, lambda x: x]:
         tokens = _regroup(tokenize(css_source, ignore_comments=False))
-        result = ''.join(token.as_css for token in tokens)
+        result = ''.join(token.as_css() for token in tokens)
         assert result == css_source
 
 
@@ -295,7 +295,4 @@ def test_token_api(tokenize, css_source):
     assert len(tokens) == 1
     token = tokens[0]
     expected_len = 7  # 2 spaces, 2 commas, 3 others.
-    assert len(token) == expected_len
     assert len(token.content) == expected_len
-    for a, b in zip(iter(token), token.content):
-        assert a is b

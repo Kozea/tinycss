@@ -32,7 +32,7 @@ def params(css, encoding, use_bom=False, expect_error=False, **kwargs):
     params('£', 'ShiftJIS', protocol_encoding='utf8',
                           document_encoding='ShiftJIS'),
     params('@charset "utf8"; £', 'ShiftJIS', expect_error=True),
-    params('@charset "utf£"; £', 'ShiftJIS', expect_error=True),
+    params('@charset "utf£8"; £', 'ShiftJIS', expect_error=True),
     params('@charset "unknown-encoding"; £', 'ShiftJIS', expect_error=True),
     params('@charset "utf8"; £', 'ShiftJIS', document_encoding='ShiftJIS'),
     params('£', 'ShiftJIS', linking_encoding='utf8',

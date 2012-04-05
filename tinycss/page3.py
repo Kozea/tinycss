@@ -114,8 +114,7 @@ class CSSPage3Parser(CSS21Parser):
                 raise ParseError(rule.head[0],
                     'unexpected %s token in %s rule header'
                     % (rule.head[0].type, rule.at_keyword))
-            declarations, body_errors = self.parse_declaration_list(
-                rule.body.content)
+            declarations, body_errors = self.parse_declaration_list(rule.body)
             errors.extend(body_errors)
             return MarginRule(rule.at_keyword, declarations,
                               rule.line, rule.column)

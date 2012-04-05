@@ -165,5 +165,5 @@ class ParseError(ValueError):
             'Parse error at {0.line}:{0.column}, {0.reason}'.format(self))
         super(ParseError, self).__init__(self.message)
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self):
         return ('<{0.__class__.__name__}: {0.message}>'.format(self))

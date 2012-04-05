@@ -124,7 +124,7 @@ TOKEN_DISPATCH = []
 
 try:
     unichr
-except NameError:  # pragma: no cover
+except NameError:
     # Python 3
     unichr = chr
     unicode = str
@@ -274,10 +274,6 @@ class Token(object):
         but these are ignored, are syntax errors, or are later transformed
         into :class:`ContainerToken` or :class:`FunctionToken`.
 
-    .. attribute:: as_css
-
-        The string as it was read from the CSS source
-
     .. attribute:: value
 
         The parsed value:
@@ -303,25 +299,32 @@ class Token(object):
 
     .. attribute:: line
 
-        The line number of this token in the CSS source
+        The line number in the CSS source of the start of this token.
 
     .. attribute:: column
 
-        The column number inside a line of this token in the CSS source
+        The column number (inside a source line) of the start of this token.
 
     """
     is_container = False
-    __slots__ = 'type', 'as_css', 'value', 'unit', 'line', 'column'
+    __slots__ = 'type', '_as_css', 'value', 'unit', 'line', 'column'
 
     def __init__(self, type_, css_value, value, unit, line, column):
         self.type = type_
-        self.as_css = css_value
+        self._as_css = css_value
         self.value = value
         self.unit = unit
         self.line = line
         self.column = column
 
-    def __repr__(self):  # pragma: no cover
+    def as_css(self):
+        """
+        Return as an Unicode string the CSS representation of the token,
+        as parsed in the source.
+        """
+        return self._as_css
+
+    def __repr__(self):
         return ('<Token {0.type} at {0.line}:{0.column} {0.value!r}{1}>'
                 .format(self, self.unit or ''))
 
@@ -340,15 +343,10 @@ class ContainerToken(object):
         ``FUNCTION``. For ``FUNCTION``, the object is actually a
         :class:`FunctionToken`.
 
-    .. attribute:: css_start
+    .. attribute:: unit
 
-        The string for the opening token as it was read from the CSS source.
-        Eg: ``{``
-
-    .. attribute:: css_end
-
-        The string for the closing token as it was read from the CSS source
-        Eg: ``}``
+        Always ``None``. Included to make :class:`ContainerToken` behave
+        more like :class:`Token`.
 
     .. attribute:: content
 
@@ -357,46 +355,39 @@ class ContainerToken(object):
 
     .. attribute:: line
 
-        The line number of the opening token in the CSS source
+        The line number in the CSS source of the start of this token.
 
     .. attribute:: column
 
-        The column number inside a line of the opening token in the CSS source
+        The column number (inside a source line) of the start of this token.
 
     """
     is_container = True
-    __slots__ = 'type', 'css_start', 'css_end', 'content', 'line', 'column'
+    unit = None
+    __slots__ = 'type', '_css_start', '_css_end', 'content', 'line', 'column'
 
     def __init__(self, type_, css_start, css_end, content, line, column):
         self.type = type_
-        self.css_start = css_start
-        self.css_end = css_end
+        self._css_start = css_start
+        self._css_end = css_end
         self.content = content
         self.line = line
         self.column = column
 
-    @property
     def as_css(self):
-        """The (recursive) CSS representation of the token,
+        """
+        Return as an Unicode string the CSS representation of the token,
         as parsed in the source.
         """
-        parts = [self.css_start]
-        parts.extend(token.as_css for token in self.content)
-        parts.append(self.css_end)
+        parts = [self._css_start]
+        parts.extend(token.as_css() for token in self.content)
+        parts.append(self._css_end)
         return ''.join(parts)
 
     format_string = '<ContainerToken {0.type} at {0.line}:{0.column}>'
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self):
         return (self.format_string + ' {0.content}').format(self)
-
-    # Sequence-like API (not the full collections.Sequence ABC, though)
-
-    def __iter__(self):
-        return iter(self.content)
-
-    def __len__(self):
-        return len(self.content)
 
 
 class FunctionToken(ContainerToken):
@@ -419,3 +410,31 @@ class FunctionToken(ContainerToken):
 
     format_string = ('<FunctionToken {0.function_name}() at '
                      '{0.line}:{0.column}>')
+
+
+class TokenList(list):
+    """
+    A mixed list of :class:`~.token_data.Token` and
+    :class:`~.token_data.ContainerToken` objects.
+
+    This is a subclass of the builtin :class:`~builtins.list` type.
+    It can be iterated, indexed and sliced as usual, but also has some
+    additional API:
+
+    """
+    @property
+    def line(self):
+        """The line number in the CSS source of the first token."""
+        return self[0].line
+
+    @property
+    def column(self):
+        """The column number (inside a source line) of the first token."""
+        return self[0].column
+
+    def as_css(self):
+        """
+        Return as an Unicode string the CSS representation of the tokens,
+        as parsed in the source.
+        """
+        return ''.join(token.as_css() for token in self)

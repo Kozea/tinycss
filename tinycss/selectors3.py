@@ -21,7 +21,7 @@ from .css21 import CSS21Parser, ParseError
 
 try:
     from lxml import cssselect
-except ImportError as exc:  # pragma: no cover
+except ImportError as exc:
     exc.message = exc.msg = (
         __name__ + ' depends on lxml.cssselect. Please install lxml '
         'with "pip install lxml" or from http://lxml.de/')
@@ -116,7 +116,7 @@ def parse_selector_group_string(css_string):
 
 
 def _parse_selector_group_tokens(group_tokens):
-    return [parse_selector_string(''.join(t.as_css for t in tokens))
+    return [parse_selector_string(''.join(t.as_css() for t in tokens))
             for tokens in split_on_comma(group_tokens)]
 
 
@@ -236,5 +236,5 @@ class CSSSelectors3Parser(CSS21Parser):
         except InvalidSelectorError as exc:
             # Invalidate the whole ruleset even if some selectors
             # in the selector group are valid.
-            raise ParseError(ruleset, exc.args[0])
+            raise ParseError(ruleset.selector, exc.args[0])
         return ruleset, errors

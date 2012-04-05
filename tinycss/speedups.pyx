@@ -29,18 +29,25 @@ cdef class CToken:
     """
     is_container = False
 
-    cdef public object type, as_css, value, unit
+    cdef public object type, _as_css, value, unit
     cdef public Py_ssize_t line, column
 
     def __init__(self, type_, css_value, value, unit, line, column):
         self.type = type_
-        self.as_css = css_value
+        self._as_css = css_value
         self.value = value
         self.unit = unit
         self.line = line
         self.column = column
 
-    def __repr__(self):  # pragma: no cover
+    def as_css(self):
+        """
+        Return as an Unicode string the CSS representation of the token,
+        as parsed in the source.
+        """
+        return self._as_css
+
+    def __repr__(self):
         return ('<Token {0.type} at {0.line}:{0.column} {0.value!r}{1}>'
                 .format(self, self.unit or ''))
 

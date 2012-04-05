@@ -177,11 +177,11 @@ def regroup(tokens):
                 if eof[0]:
                     end = ''  # Implicit end of structure at EOF.
                 if type_ == 'FUNCTION':
-                    yield FunctionToken(token.type, token.as_css, end,
+                    yield FunctionToken(token.type, token.as_css(), end,
                                         token.value, content,
                                         token.line, token.column)
                 else:
-                    yield ContainerToken(token.type, token.as_css, end,
+                    yield ContainerToken(token.type, token.as_css(), end,
                                          content,
                                          token.line, token.column)
         else:
@@ -208,7 +208,7 @@ def tokenize_grouped(css_source, ignore_comments=True):
 python_tokenize_flat = tokenize_flat
 try:
     from . import speedups
-except ImportError:  # pragma: no cover
+except ImportError:
     cython_tokenize_flat = None
 else:
     cython_tokenize_flat = speedups.tokenize_flat

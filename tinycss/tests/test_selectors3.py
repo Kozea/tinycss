@@ -17,7 +17,7 @@ from . import assert_errors
 
 try:
     import lxml.cssselect
-except ImportError:  # pragma: no cover
+except ImportError:
     LXML_INSTALLED = False
 else:
     LXML_INSTALLED = True

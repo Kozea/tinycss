@@ -14,9 +14,10 @@ from __future__ import unicode_literals
 from itertools import chain, islice
 
 from .decoding import decode
+from .token_data import TokenList
 from .tokenizer import tokenize_grouped
-from .parsing import (strip_whitespace, validate_value, validate_block,
-                      validate_any, ParseError)
+from .parsing import (strip_whitespace, remove_whitespace, split_on_comma,
+                      validate_value, validate_block, validate_any, ParseError)
 
 
 #  stylesheet  : [ CDO | CDC | S | statement ]*;
@@ -63,7 +64,7 @@ class Stylesheet(object):
         self.errors = errors
         self.encoding = encoding
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self):
         return '<{0.__class__.__name__} {1} rules {2} errors>'.format(
             self, len(self.rules), len(self.errors))
 
@@ -78,13 +79,15 @@ class AtRule(object):
 
     .. attribute:: head
 
-        The "head" of the at-rule until ``;`` or ``{``: a list of tokens
-        (:class:`~.token_data.Token` or :class:`~.token_data.ContainerToken`)
+        The part of the at-rule between the at-keyword and the ``{``
+        marking the body, or the ``;`` marking the end of an at-rule without
+        a body.  A :class:`~.token_data.TokenList`.
 
     .. attribute:: body
 
-        A block as a :class:`~.token_data.ContainerToken` with
-        ``token.type == '{'``, or ``None`` if the at-rule ends with ``;``.
+        The content of the body between ``{`` and ``}`` as a
+        :class:`~.token_data.TokenList`, or ``None`` if there is no body
+        (ie. if the rule ends with ``;``).
 
     The head was validated against the core grammar but **not** the body,
     as the body might contain declarations. In case of an error in a
@@ -98,12 +101,12 @@ class AtRule(object):
     """
     def __init__(self, at_keyword, head, body, line, column):
         self.at_keyword = at_keyword
-        self.head = head
-        self.body = body
+        self.head = TokenList(head)
+        self.body = TokenList(body) if body is not None else body
         self.line = line
         self.column = column
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self):
         return ('<{0.__class__.__name__} {0.line}:{0.column} {0.at_keyword}>'
                 .format(self))
 
@@ -117,8 +120,7 @@ class RuleSet(object):
 
     .. attribute:: selector
 
-        The selector as a list of :class:`~.token_data.Token` or
-        :class:`~.token_data.ContainerToken`.
+        The selector as a :class:`~.token_data.TokenList`.
         In CSS 3, this is actually called a selector group.
 
     .. attribute:: declarations
@@ -130,12 +132,12 @@ class RuleSet(object):
     at_keyword = None
 
     def __init__(self, selector, declarations, line, column):
-        self.selector = selector
+        self.selector = TokenList(selector)
         self.declarations = declarations
         self.line = line
         self.column = column
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self):
         return ('<{0.__class__.__name__} at {0.line}:{0.column}'
                 ' {0.selector.as_css}>'.format(self))
 
@@ -149,8 +151,7 @@ class Declaration(object):
 
     .. attribute:: value
 
-        The property value as a list of :class:`~.token_data.Token` or
-        :class:`~.token_data.ContainerToken`.
+        The property value as a :class:`~.token_data.TokenList`.
 
         The value is not parsed. UAs using tinycss may only support
         some properties or some values and tinycss does not know which.
@@ -168,12 +169,12 @@ class Declaration(object):
     """
     def __init__(self, name, value, priority, line, column):
         self.name = name
-        self.value = value
+        self.value = TokenList(value)
         self.priority = priority
         self.line = line
         self.column = column
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self):
         priority = ' !' + self.priority if self.priority else ''
         return ('<{0.__class__.__name__} {0.line}:{0.column}'
                 ' {0.name}: {0.value.as_css}{1}>'.format(self, priority))
@@ -219,7 +220,7 @@ class PageRule(object):
         self.line = line
         self.column = column
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self):
         return ('<{0.__class__.__name__} {0.line}:{0.column}'
                 ' {0.selector}>'.format(self))
 
@@ -250,7 +251,7 @@ class MediaRule(object):
         self.line = line
         self.column = column
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self):
         return ('<{0.__class__.__name__} {0.line}:{0.column}'
                 ' {0.media}>'.format(self))
 
@@ -283,7 +284,7 @@ class ImportRule(object):
         self.line = line
         self.column = column
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self):
         return ('<{0.__class__.__name__} {0.line}:{0.column}'
                 ' {0.uri}>'.format(self))
 
@@ -303,7 +304,7 @@ def _remove_at_charset(tokens):
     if [t.type for t in header] == ['ATKEYWORD', 'S', 'STRING', ';']:
         atkw, space, string, semicolon = header
         if ((atkw.value, space.value) == ('@charset', ' ')
-                and string.as_css[0] == '"'):
+                and string.as_css()[0] == '"'):
             # Found a valid @charset rule, only keep what’s after it.
             return tokens
     return chain(header, tokens)
@@ -469,7 +470,7 @@ class CSS21Parser(object):
                 for head_token in head:
                     validate_any(head_token, 'at-rule head')
                 if token.type == '{':
-                    body = token
+                    body = token.content
                 else:
                     body = None
                 return AtRule(at_keyword, head, body,
@@ -512,8 +513,7 @@ class CSS21Parser(object):
                 raise ParseError(rule,
                     'invalid {0} rule: missing block'.format(rule.at_keyword))
             declarations, at_rules, rule_errors = \
-                self.parse_declarations_and_at_rules(
-                    rule.body.content, '@page')
+                self.parse_declarations_and_at_rules(rule.body, '@page')
             errors.extend(rule_errors)
             return PageRule(selector, specificity, declarations, at_rules,
                             rule.line, rule.column)
@@ -522,12 +522,12 @@ class CSS21Parser(object):
             if context != 'stylesheet':
                 raise ParseError(rule, '@media rule not allowed in ' + context)
             if not rule.head:
-                raise ParseError(rule.body, 'expected media types for @media')
+                raise ParseError(rule, 'expected media types for @media')
             media = self.parse_media(rule.head)
             if rule.body is None:
                 raise ParseError(rule,
                     'invalid {0} rule: missing block'.format(rule.at_keyword))
-            rules, rule_errors = self.parse_rules(rule.body.content, '@media')
+            rules, rule_errors = self.parse_rules(rule.body, '@media')
             errors.extend(rule_errors)
             return MediaRule(media, rules, rule.line, rule.column)
 
@@ -558,7 +558,9 @@ class CSS21Parser(object):
             else:
                 media = ['all']
             if rule.body is not None:
-                raise ParseError(rule.body, "expected ';', got a block")
+                # The position of the ';' token would be best, but we don’t
+                # have it anymore here.
+                raise ParseError(head[-1], "expected ';', got a block")
             return ImportRule(uri, media, rule.line, rule.column)
 
         elif rule.at_keyword == '@charset':
@@ -574,34 +576,21 @@ class CSS21Parser(object):
         Media Queries are expected to override this.
 
         :param tokens:
-            An non-empty iterable of tokens
+            A non-empty list of tokens
         :raises:
             :class:`~.parsing.ParseError` on invalid media types/queries
         :returns:
             For CSS 2.1, a list of media types as strings
         """
         media_types = []
-        tokens = iter(tokens)
-        token = next(tokens)
-        while 1:
-            if token.type == 'IDENT':
-                media_types.append(token.value.lower())
+        for part in split_on_comma(remove_whitespace(tokens)):
+            types = [token.type for token in part]
+            if types == ['IDENT']:
+                media_types.append(part[0].value)
             else:
-                raise ParseError(token,
-                    'expected a media type, got {0}'.format(token.type))
-            token = next(tokens, None)
-            if not token:
-                return media_types
-            if not (token.type == 'DELIM' and token.value == ','):
-                raise ParseError(token,
-                    'expected a comma, got {0}'.format(token.type))
-            while 1:
-                next_token = next(tokens, None)
-                if not next_token:
-                    raise ParseError(token, 'expected a media type')
-                token = next_token
-                if token.type != 'S':
-                    break
+                raise ParseError(tokens[0], 'expected a media type'
+                    + ((', got ' + ', '.join(types)) if types else ''))
+        return media_types
 
     def parse_page_selector(self, tokens):
         """Parse an @page selector.

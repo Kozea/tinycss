@@ -21,14 +21,6 @@ import sys
 __all__ = ['decode']  # Everything else is implementation detail
 
 
-if sys.version_info[0] < 3:  # pragma: no cover
-    def _unicode_to_native(string):
-        return string.encode('utf8')
-else:  # pragma: no cover
-    def _unicode_to_native(string):
-        return string
-
-
 def decode(css_bytes, protocol_encoding=None,
            linking_encoding=None, document_encoding=None):
     """
@@ -63,11 +55,17 @@ def decode(css_bytes, protocol_encoding=None,
             if has_at_charset:
                 extract, endianness = encoding
                 encoding = extract(match.group(1))
+                # Get an ASCII-only unicode value.
+                # This is the only thing that works on both Python 2 and 3
+                # for bytes.decode()
+                # Non-ASCII encoding names are invalid anyway,
+                # but make sure they stay invalid.
                 encoding = encoding.decode('ascii', 'replace')
+                encoding = encoding.replace('\ufffd', '?')
                 if encoding.replace('-', '').replace('_', '').lower() in [
                         'utf16', 'utf32']:
                     encoding += endianness
-                encoding = _unicode_to_native(encoding)
+                encoding = encoding.encode('ascii', 'replace').decode('ascii')
             css_unicode = try_encoding(css_bytes, encoding)
             if css_unicode and not (has_at_charset and not
                                     css_unicode.startswith('@charset "')):
@@ -85,13 +83,14 @@ def decode(css_bytes, protocol_encoding=None,
 
 
 def try_encoding(css_bytes, encoding, fallback=True):
-    try:
+    if fallback:
+        try:
+            css_unicode = css_bytes.decode(encoding)
+        # LookupError means unknown encoding
+        except (UnicodeDecodeError, LookupError):
+            return None
+    else:
         css_unicode = css_bytes.decode(encoding)
-    # LookupError means unknown encoding
-    except (UnicodeDecodeError, LookupError):
-        if not fallback:
-            raise
-        return None
     if css_unicode and css_unicode[0] == '\ufeff':
         # Remove any Byte Order Mark
         css_unicode = css_unicode[1:]

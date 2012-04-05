@@ -57,7 +57,7 @@ def parse(tokenizer_name):
         stylesheet = CSS21Parser().parse_stylesheet_bytes(CSS)
     result = []
     for rule in stylesheet.rules:
-        selector = ''.join(s.as_css for s in rule.selector)
+        selector = rule.selector.as_css()
         declarations = [
             (declaration.name, len(list(remove_whitespace(declaration.value))))
             for declaration in rule.declarations]

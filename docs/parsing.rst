@@ -83,14 +83,13 @@ are not parsed by tinycss. They appear as tokens instead.
 
 .. module:: tinycss.token_data
 
+.. autoclass:: TokenList()
+    :member-order: bysource
+    :members:
 .. autoclass:: Token()
+    :members:
 .. autoclass:: tinycss.speedups.CToken()
 .. autoclass:: ContainerToken()
-
-    .. autoattribute:: as_css
-
-    .. method:: __iter__, __len__
-
-        Shortcuts for accessing :attr:`content`.
+    :members:
 
 .. autoclass:: FunctionToken()
