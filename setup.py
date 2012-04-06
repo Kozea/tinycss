@@ -39,11 +39,11 @@ class ve_build_ext(build_ext):
 
 
 ROOT = os.path.dirname(__file__)
-with open(os.path.join(ROOT, 'tinycss', '__init__.py')) as fd:
+with open(os.path.join(ROOT, 'tinycss', 'version.py')) as fd:
     VERSION = re.search("VERSION = '([^']+)'", fd.read()).group(1)
 
-with open(os.path.join(ROOT, 'README.rst')) as fd:
-    README = fd.read()
+with open(os.path.join(ROOT, 'README.rst'), 'rb') as fd:
+    README = fd.read().decode('utf8')
 
 
 def run_setup(with_extension):

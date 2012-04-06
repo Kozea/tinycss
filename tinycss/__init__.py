@@ -11,8 +11,8 @@
 
 import sys
 
-
-VERSION = '0.1'
+from .version import VERSION
+__version__ = VERSION
 
 
 def make_parser(*base_classes, **kwargs):
