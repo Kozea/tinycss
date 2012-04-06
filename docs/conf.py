@@ -53,7 +53,7 @@ copyright = '2012, Simon Sapin'
 #release = '0.1dev'
 import re
 with open(os.path.join(os.path.dirname(__file__), '..',
-                       'tinycss', '__init__.py')) as init_py:
+                       'tinycss', 'version.py')) as init_py:
     release = re.search("VERSION = '([^']+)'", init_py.read()).group(1)
 # The short X.Y version.
 version = release.rstrip('dev')

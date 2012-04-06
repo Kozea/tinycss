@@ -2,6 +2,17 @@ tinycss changelog
 =================
 
 
+Version 0.1.1
+-------------
+
+Released on April 6th 2012.
+
+Bug fixes:
+
+* Error handling on exepected end of stylesheet in an at-rule head
+* Fix the installation on ASCII-only locales
+
+
 Version 0.1
 -----------
 
