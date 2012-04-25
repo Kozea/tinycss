@@ -6,11 +6,57 @@ CSS 3 Modules
 Selectors 3
 -----------
 
-See cssselect_ can be used to parse selectors.
+.. currentmodule:: tinycss.css21
 
-**TODO:** give an example of how to use it with tinycss.
+On :attr:`RuleSet.selector`, the :meth:`~.token_data.TokenList.as_css` method
+can be used to serialize a selector back to an Unicode string.
+
+    >>> import tinycss
+    >>> stylesheet = tinycss.make_parser().parse_stylesheet(
+    ...     'div.error, #root > section:first-letter { color: red }')
+    >>> selector_string = stylesheet.rules[0].selector.as_css()
+    >>> selector_string
+    u'div.error, #root > section:first-letter'
+
+This string can be parsed by cssselect_. The parsed objects have information
+about pseudo-elements and selector specificity.
 
 .. _cssselect: http://packages.python.org/cssselect/
+
+    >>> import cssselect
+    >>> selectors = cssselect.parse(selector_string)
+    >>> [s.specificity() for s in selectors]
+    [(0, 1, 1), (1, 0, 2)]
+    >>> [s.pseudo_element for s in selectors]
+    [None, u'first-letter']
+
+These objects can in turn be translated to XPath expressions. Note that
+the translation ignores pseudo-elements, you have to account for them
+somehow or reject selectors with pseudo-elements.
+
+    >>> xpath = cssselect.HTMLTranslator().selector_to_xpath(selectors[1])
+    >>> xpath
+    u"descendant-or-self::*[@id = 'root']/section"
+
+Finally, the XPath expressions can be used with lxml_ to find the matching
+elements.
+
+    >>> from lxml import etree
+    >>> compiled_selector = etree.XPath(xpath)
+    >>> document = etree.fromstring('''<section id="root">
+    ...   <section id="head">Title</section>
+    ...   <section id="content">
+    ...     Lorem <section id="sub-section">ipsum</section>
+    ...   </section>
+    ... </section>''')
+    >>> [el.get('id') for el in compiled_selector(document)]
+    ['head', 'content']
+
+.. _lxml: http://lxml.de/xpathxslt.html#xpath
+
+Find more details in the `cssselect documentation`_.
+
+.. _cssselect documentation: http://packages.python.org/cssselect/
 
 
 .. module:: tinycss.color3

@@ -123,8 +123,8 @@ class RuleSet(object):
         The selector as a :class:`~.token_data.TokenList`.
         In CSS 3, this is actually called a selector group.
 
-        ``selector.as_css()`` can be used with `cssselect
-        <http://packages.python.org/cssselect/>`_, see :ref:`selectors3`.
+        ``rule.selector.as_css()`` gives the selector as a string.
+        This string can be used with *cssselect*, see :ref:`selectors3`.
 
     .. attribute:: declarations
 
@@ -141,8 +141,8 @@ class RuleSet(object):
         self.column = column
 
     def __repr__(self):
-        return ('<{0.__class__.__name__} at {0.line}:{0.column}'
-                ' {0.selector.as_css}>'.format(self))
+        return ('<{0.__class__.__name__} at {0.line}:{0.column} {1}>'
+                .format(self, self.selector.as_css()))
 
 
 class Declaration(object):
