@@ -3,8 +3,8 @@
 Extending the parser
 ====================
 
-Various modules such as :mod:`.selectors3` and :mod:`.page3` extend the
-CSS 2.1 parser to add support for some CSS 3 syntax.
+Modules such as :mod:`.page3` extend the CSS 2.1 parser to add support for
+CSS 3 syntax.
 They do so by sub-classing :class:`.css21.CSS21Parser` and overriding/extending
 some of its methods. If fact, the parser is made of methods in a class
 (rather than a set of functions) solely to enable this kind of sub-classing.

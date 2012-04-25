@@ -123,6 +123,9 @@ class RuleSet(object):
         The selector as a :class:`~.token_data.TokenList`.
         In CSS 3, this is actually called a selector group.
 
+        ``selector.as_css()`` can be used with `cssselect
+        <http://packages.python.org/cssselect/>`_, see :ref:`selectors3`.
+
     .. attribute:: declarations
 
         The list of :class:`Declaration`, in source order.

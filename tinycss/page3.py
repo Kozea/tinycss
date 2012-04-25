@@ -42,7 +42,7 @@ class MarginRule(object):
 
     .. attribute:: declarations
 
-        A list of :class:`~.css21.Declaration`
+        A list of :class:`~.css21.Declaration` objects.
 
     .. attribute:: line
 
@@ -75,14 +75,16 @@ class CSSPage3Parser(CSS21Parser):
     * ``selector``, instead of a single string, is a tuple of the page name
       and the pseudo class. Each of these may be a ``None`` or a string.
 
-    ======================== ======================
-    CSS                      Parsed selector
-    ======================== ======================
-    ``@page {}``             ``(None, None)``
-    ``@page :first {}``      ``(None, 'first')``
-    ``@page chapter {}``     ``('chapter', None)``
-    ``@page table:right {}`` ``('table', 'right')``
-    ======================== ======================
+    +--------------------------+------------------------+
+    | CSS                      | Parsed selectors       |
+    +==========================+========================+
+    | .. code-block:: css      | .. code-block:: python |
+    |                          |                        |
+    |     @page {}             |     (None, None)       |
+    |     @page :first {}      |     (None, 'first')    |
+    |     @page chapter {}     |     ('chapter', None)  |
+    |     @page table:right {} |     ('table', 'right') |
+    +--------------------------+------------------------+
 
     """
 

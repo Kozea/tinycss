@@ -21,13 +21,8 @@ def make_parser(*base_classes, **kwargs):
     :param base_classes:
         Positional arguments are base classes the new parser
         class will extend.
-    :param with_selectors3:
-        Add :class:`CSSSelectors3Parser` to :obj:`base_classes`: enable
-        parsing and matching of level 3 selectors.
-        This requires lxml.cssselect, and will raise
-        :class:`ImportError` if it is not installed.
     :param with_page3:
-        Add :class:`CSSPage3Parser` to :obj:`base_classes`: enable
+        Add :class:`~page3.CSSPage3Parser` to :obj:`base_classes`: enable
         CSS 3 Paged Media syntax.
     :param kwargs:
         Other arguments are passed to the parser’s constructor.
@@ -56,6 +51,5 @@ def make_parser(*base_classes, **kwargs):
 
 
 PARSER_MODULES = [
-    ('selectors3', 'CSSSelectors3Parser'),
     ('page3', 'CSSPage3Parser'),
 ]

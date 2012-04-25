@@ -19,7 +19,7 @@ Import *tinycss*, make a parser object, and parse a stylesheet:
     <ImportRule 1:1 foo.css>
     <RuleSet at 2:5 p.error>
 
-You’ll get a :class:`~tinycss.core.Stylesheet` object which contains
+You’ll get a :class:`~tinycss.css21.Stylesheet` object which contains
 all the parsed content.
 
 

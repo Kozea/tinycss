@@ -4,13 +4,12 @@ tinycss: CSS parser for Python
 *tinycss* is a complete yet simple CSS parser for Python. It supports the full
 syntax and error handling for CSS 2.1 as well as some CSS 3 modules:
 
-* Selectors 3 (can also find matching elements in a `lxml <http://lxml.de/>`_
-  document)
 * CSS Color 3
 * CSS Paged Media 3
 
-It is designed to be easy to extend for new CSS modules and syntax.
-
+It is designed to be easy to extend for new CSS modules and syntax,
+and integrates well with `cssselect <http://packages.python.org/cssselect/>`_
+for Selectors 3 support.
 
 Quick facts:
 

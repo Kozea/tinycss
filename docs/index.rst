@@ -8,14 +8,10 @@ tinycss is tested on CPython 2.6, 2.7, 3.1 and 3.2 as well as PyPy 1.8;
 it should work on any implementation of **Python 2.6 or later version
 (including 3.x)** of the language.
 
-lxml_ is required for the :mod:`~tinycss.selectors3` module, but not for
-the base parser or other modules.
-
 Cython_ is used for optional accelerators but is only required for
 development versions on tinycss.
 
 .. _Cython: http://cython.org/
-.. _lxml: http://lxml.de/
 
 
 Installation

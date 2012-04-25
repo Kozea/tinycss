@@ -2,10 +2,21 @@ tinycss changelog
 =================
 
 
+Version 0.2
+-----------
+
+Not released yet.
+
+**Breaking changes:**
+
+* Remove the ``selectors3`` module. The functionality has moved to the
+  `cssselect <http://packages.python.org/cssselect/>`_ project.
+
+
 Version 0.1.1
 -------------
 
-Released on April 6th 2012.
+Released on 2012-04-06.
 
 Bug fixes:
 
@@ -16,7 +27,7 @@ Bug fixes:
 Version 0.1
 -----------
 
-Released on April 5th 2012.
+Released on 2012-04-05.
 
 First release. Parser support for CSS 2.1, Seloctors 3, Color 3 and
 Paged Media 3.

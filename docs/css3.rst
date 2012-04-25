@@ -1,18 +1,16 @@
 CSS 3 Modules
 =============
 
-.. module:: tinycss.selectors3
+.. _selectors3:
 
 Selectors 3
 -----------
 
-This module is based on `lxml.cssselect <http://lxml.de/cssselect.html>`_.
-Importing :mod:`tinycss.selectors3` without lxml installed will raise an
-:exc:`~exceptions.ImportError`.
+See cssselect_ can be used to parse selectors.
 
-.. autoclass:: CSSSelectors3Parser
-.. autoclass:: Selector
-    :members: match
+**TODO:** give an example of how to use it with tinycss.
+
+.. _cssselect: http://packages.python.org/cssselect/
 
 
 .. module:: tinycss.color3
@@ -20,16 +18,17 @@ Importing :mod:`tinycss.selectors3` without lxml installed will raise an
 Color 3
 -------
 
-This module implements parsing for the *<color>* values defined in
+This module implements parsing for the *<color>* values, as defined in
 `CSS 3 Color <http://www.w3.org/TR/css3-color/>`_.
 
 The (deprecated) CSS2 system colors are not supported, but you can
-easily test for them if you want as they are simple ``IDENT`` tokens::
+easily test for them if you want as they are simple ``IDENT`` tokens.
+For example::
 
     if token.type == 'IDENT' and token.value == 'ButtonText':
         return ...
 
-Other values types are supported:
+All other values types *are* supported:
 
 * Basic, extended (X11) and transparent color keywords;
 * 3-digit and 6-digit hexadecimal notations;
@@ -37,8 +36,8 @@ Other values types are supported:
 * ``currentColor``
 
 This module does not integrate with a parser class. Instead, it provides
-a function that can help parse property values, as
-:attr:`.css21.Declaration.value` is provided as a list of unparsed tokens.
+a function that can parse tokens as found in :attr:`.css21.Declaration.value`,
+for example.
 
 .. autofunction:: parse_color
 .. autofunction:: parse_color_string
