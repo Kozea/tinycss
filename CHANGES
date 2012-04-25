@@ -11,6 +11,7 @@ Not released yet.
 
 * Remove the ``selectors3`` module. The functionality has moved to the
   `cssselect <http://packages.python.org/cssselect/>`_ project.
+* Simplify the API for :func:`~tinycss.make_parser`.
 
 
 Version 0.1.1

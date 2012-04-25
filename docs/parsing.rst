@@ -6,21 +6,23 @@ Parsing with tinycss
 Quickstart
 ----------
 
-Import *tinycss*, make a parser object, and parse a stylesheet:
+Import *tinycss*, make a parser object with the features you want,
+and parse a stylesheet:
 
 .. doctest::
 
     >>> import tinycss
-    >>> parser = tinycss.make_parser()
+    >>> parser = tinycss.make_parser('page3')
     >>> stylesheet = parser.parse_stylesheet_bytes(b'''@import "foo.css";
-    ...     p.error { color: red }''')
-    >>> for rule in stylesheet.rules:
-    ...     print(rule)
-    <ImportRule 1:1 foo.css>
-    <RuleSet at 2:5 p.error>
+    ...     p.error { color: red }  @lorem-ipsum;
+    ...     @page tables { size: landscape }''')
+    >>> stylesheet.rules
+    [<ImportRule 1:1 foo.css>, <RuleSet at 2:5 p.error>, <PageRule 3:5 (u'tables', None)>]
+    >>> stylesheet.errors
+    [<ParseError: Parse error at 2:29, unknown at-rule in stylesheet context: @lorem-ipsum>]
 
 You’ll get a :class:`~tinycss.css21.Stylesheet` object which contains
-all the parsed content.
+all the parsed content as well as a list of encountered errors.
 
 
 Parsers
@@ -33,7 +35,7 @@ is also a convenience function to do that:
 
 .. module:: tinycss
 
-.. autofunction:: make_parser(*base_classes, with_selectors3=False, with_page3=False, **kwargs)
+.. autofunction:: make_parser
 
 
 .. module:: tinycss.css21

@@ -8,15 +8,18 @@ syntax and error handling for CSS 2.1 as well as some CSS 3 modules:
 * CSS Paged Media 3
 
 It is designed to be easy to extend for new CSS modules and syntax,
-and integrates well with `cssselect <http://packages.python.org/cssselect/>`_
-for Selectors 3 support.
+and integrates well with cssselect_ for Selectors 3 support.
 
 Quick facts:
 
 * Free software: BSD licensed
 * Compatible with Python 2.6+ and 3.x
-* Latest documentation `on python.org <http://packages.python.org/tinycss/>`_
-* Source, issues and pull requests `on Github
-  <https://github.com/SimonSapin/tinycss/>`_
-* Releases `on PyPI <http://pypi.python.org/pypi/tinycss>`_
+* Latest documentation `on python.org`_
+* Source, issues and pull requests `on Github`_
+* Releases `on PyPI`_
 * Install with ``pip install tinycss``
+
+.. _cssselect: http://packages.python.org/cssselect/
+.. _on python.org: http://packages.python.org/tinycss/
+.. _on Github: https://github.com/SimonSapin/tinycss/
+.. _on PyPI: http://pypi.python.org/pypi/tinycss
