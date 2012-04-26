@@ -206,6 +206,7 @@ def tokenize_grouped(css_source, ignore_comments=True):
 # Optional Cython version of tokenize_flat
 # Make both versions available with explicit names for tests.
 python_tokenize_flat = tokenize_flat
+from .tokenizer2 import tokenize_flat as python_tokenize_flat2
 try:
     from . import speedups
 except ImportError:

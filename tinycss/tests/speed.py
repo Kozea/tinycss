@@ -66,7 +66,7 @@ def parse(tokenizer_name):
 
 parse_cython = functools.partial(parse, 'cython_tokenize_flat')
 parse_python = functools.partial(parse, 'python_tokenize_flat')
-
+parse_python2 = functools.partial(parse, 'python_tokenize_flat2')
 
 def parse_cssutils():
     stylesheet = parseString(CSS)
@@ -112,7 +112,7 @@ def time(function):
 
 
 def run():
-    if tokenizer.cython_tokenize_flat:
+    if 0 and tokenizer.cython_tokenize_flat:
         data_set = [
             ('tinycss + speedups      ', parse_cython),
         ]
@@ -121,7 +121,7 @@ def run():
         data_set = []
     data_set += [
         ('tinycss WITHOUT speedups', parse_python),
-        ('cssutils                ', parse_cssutils),
+        ('tinycss NG              ', parse_python2),
     ]
     label, function = data_set.pop(0)
     ref = time(function)

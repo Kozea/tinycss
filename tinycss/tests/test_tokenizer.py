@@ -16,7 +16,7 @@ import os
 import pytest
 
 from tinycss.tokenizer import (
-    python_tokenize_flat, cython_tokenize_flat, regroup)
+    python_tokenize_flat, python_tokenize_flat2, cython_tokenize_flat, regroup)
 
 
 def test_speedups():
@@ -28,9 +28,15 @@ def test_speedups():
         'variable if this is expected (eg. on PyPy).')
 
 
+TOKENIZER_IMPLEMENTATIONS = (
+    python_tokenize_flat,
+    python_tokenize_flat2,
+    cython_tokenize_flat)
+
+
 @pytest.mark.parametrize(('tokenize', 'css_source', 'expected_tokens'), [
   (tokenize,) + test_data
-  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+  for tokenize in TOKENIZER_IMPLEMENTATIONS
   for test_data in [
     ('', []),
     ('red -->',
@@ -137,8 +143,7 @@ def test_tokens(tokenize, css_source, expected_tokens):
         assert result == expected_tokens
 
 
-@pytest.mark.parametrize('tokenize', [
-    python_tokenize_flat, cython_tokenize_flat])
+@pytest.mark.parametrize('tokenize', TOKENIZER_IMPLEMENTATIONS)
 def test_positions(tokenize):
     """Test the reported line/column position of each token."""
     if tokenize is None:  # pragma: no cover
@@ -157,7 +162,7 @@ def test_positions(tokenize):
 
 @pytest.mark.parametrize(('tokenize', 'css_source', 'expected_tokens'), [
   (tokenize,) + test_data
-  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+  for tokenize in TOKENIZER_IMPLEMENTATIONS
   for test_data in [
     ('', []),
     (r'Lorem\26 "i\psum"4px', [
@@ -236,7 +241,7 @@ def jsonify(tokens):
 
 @pytest.mark.parametrize(('tokenize', 'ignore_comments', 'expected_tokens'), [
   (tokenize,) + test_data
-  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+  for tokenize in TOKENIZER_IMPLEMENTATIONS
   for test_data in [
     (False, [
         ('COMMENT', '/* lorem */'),
@@ -267,7 +272,7 @@ def test_comments(tokenize, ignore_comments, expected_tokens):
 
 @pytest.mark.parametrize(('tokenize', 'css_source'), [
   (tokenize, test_data)
-  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+  for tokenize in TOKENIZER_IMPLEMENTATIONS
   for test_data in [
     r'''p[example="\
 foo(int x) {\
@@ -291,7 +296,7 @@ def test_token_serialize_css(tokenize, css_source):
 
 @pytest.mark.parametrize(('tokenize', 'css_source'), [
     (tokenize, test_data)
-    for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+    for tokenize in TOKENIZER_IMPLEMENTATIONS
     for test_data in [
         '(8, foo, [z])', '[8, foo, (z)]', '{8, foo, [z]}', 'func(8, foo, [z])'
     ]
