@@ -15,4 +15,4 @@ def assert_errors(errors, expected_errors):
     """Test not complete error messages but only substrings."""
     assert len(errors) == len(expected_errors)
     for error, expected in zip(errors, expected_errors):
-        assert expected in error.message
+        assert expected in str(error)

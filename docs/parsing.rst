@@ -19,7 +19,7 @@ and parse a stylesheet:
     >>> stylesheet.rules
     [<ImportRule 1:1 foo.css>, <RuleSet at 2:5 p.error>, <PageRule 3:5 (u'tables', None)>]
     >>> stylesheet.errors
-    [<ParseError: Parse error at 2:29, unknown at-rule in stylesheet context: @lorem-ipsum>]
+    [ParseError(u'Parse error at 2:29, unknown at-rule in stylesheet context: @lorem-ipsum',)]
 
 You’ll get a :class:`~tinycss.css21.Stylesheet` object which contains
 all the parsed content as well as a list of encountered errors.
