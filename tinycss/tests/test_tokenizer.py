@@ -9,6 +9,8 @@
 
 
 from __future__ import unicode_literals
+
+import sys
 import os
 
 import pytest
@@ -120,13 +122,19 @@ foo(int x) {\
 def test_tokens(tokenize, css_source, expected_tokens):
     if tokenize is None:  # pragma: no cover
         pytest.skip('Speedups not available')
-    tokens = tokenize(css_source, ignore_comments=False)
-    result = [
-        (token.type, token.value) + (
-            () if token.unit is None else (token.unit,))
-        for token in tokens
-    ]
-    assert result == expected_tokens
+    sources = [css_source]
+    if sys.version_info[0] < 3:
+        # On Python 2.x, ASCII-only bytestrings can be used
+        # where Unicode is expected.
+        sources.append(css_source.encode('ascii'))
+    for css_source in sources:
+        tokens = tokenize(css_source, ignore_comments=False)
+        result = [
+            (token.type, token.value) + (
+                () if token.unit is None else (token.unit,))
+            for token in tokens
+        ]
+        assert result == expected_tokens
 
 
 @pytest.mark.parametrize('tokenize', [
