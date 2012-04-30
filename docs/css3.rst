@@ -16,7 +16,7 @@ can be used to serialize a selector back to an Unicode string.
     ...     'div.error, #root > section:first-letter { color: red }')
     >>> selector_string = stylesheet.rules[0].selector.as_css()
     >>> selector_string
-    u'div.error, #root > section:first-letter'
+    'div.error, #root > section:first-letter'
 
 This string can be parsed by cssselect_. The parsed objects have information
 about pseudo-elements and selector specificity.
@@ -28,7 +28,7 @@ about pseudo-elements and selector specificity.
     >>> [s.specificity() for s in selectors]
     [(0, 1, 1), (1, 0, 2)]
     >>> [s.pseudo_element for s in selectors]
-    [None, u'first-letter']
+    [None, 'first-letter']
 
 These objects can in turn be translated to XPath expressions. Note that
 the translation ignores pseudo-elements, you have to account for them
@@ -36,7 +36,7 @@ somehow or reject selectors with pseudo-elements.
 
     >>> xpath = cssselect.HTMLTranslator().selector_to_xpath(selectors[1])
     >>> xpath
-    u"descendant-or-self::*[@id = 'root']/section"
+    "descendant-or-self::*[@id = 'root']/section"
 
 Finally, the XPath expressions can be used with lxml_ to find the matching
 elements.

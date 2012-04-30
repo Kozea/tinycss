@@ -180,7 +180,8 @@ class Declaration(object):
     def __repr__(self):
         priority = ' !' + self.priority if self.priority else ''
         return ('<{0.__class__.__name__} {0.line}:{0.column}'
-                ' {0.name}: {0.value.as_css}{1}>'.format(self, priority))
+                ' {0.name}: {1}{2}>'.format(
+                    self, self.value.as_css(), priority))
 
 
 class PageRule(object):
