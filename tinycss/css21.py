@@ -554,11 +554,7 @@ class CSS21Parser(object):
                     'expected URI or STRING for @import rule, got '
                     + head[0].type)
             uri = head[0].value
-            media_tokens = strip_whitespace(head[1:])
-            if media_tokens:
-                media = self.parse_media(media_tokens)
-            else:
-                media = ['all']
+            media = self.parse_media(strip_whitespace(head[1:]))
             if rule.body is not None:
                 # The position of the ';' token would be best, but we don’t
                 # have it anymore here.
@@ -578,12 +574,14 @@ class CSS21Parser(object):
         Media Queries are expected to override this.
 
         :param tokens:
-            A non-empty list of tokens
+            A list of tokens
         :raises:
             :class:`~.parsing.ParseError` on invalid media types/queries
         :returns:
             For CSS 2.1, a list of media types as strings
         """
+        if not tokens:
+            return ['all']
         media_types = []
         for part in split_on_comma(remove_whitespace(tokens)):
             types = [token.type for token in part]
