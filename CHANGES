@@ -2,6 +2,15 @@ tinycss changelog
 =================
 
 
+Version 0.3
+-----------
+
+Not released yet.
+
+* Fix a bug when parsing \5c (an escaped antislash.)
+
+
+
 Version 0.2
 -----------
 

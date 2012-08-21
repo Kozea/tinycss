@@ -79,8 +79,8 @@ def tokenize_flat(css_source, ignore_comments=True,
                 value = match.group(1)
                 value = float(value) if '.' in value else int(value)
                 unit = match.group(2)
-                unit = unicode_unescape(unit)
                 unit = simple_unescape(unit)
+                unit = unicode_unescape(unit)
                 unit = unit.lower()  # normalize
             elif type_ == 'PERCENTAGE':
                 value = css_value[:-1]
@@ -94,20 +94,20 @@ def tokenize_flat(css_source, ignore_comments=True,
                     value = int(value)
                     type_ = 'INTEGER'
             elif type_ in ('IDENT', 'ATKEYWORD', 'HASH', 'FUNCTION'):
-                value = unicode_unescape(css_value)
-                value = simple_unescape(value)
+                value = simple_unescape(css_value)
+                value = unicode_unescape(value)
             elif type_ == 'URI':
                 value = match.group(1)
                 if value and value[0] in '"\'':
                     value = value[1:-1]  # Remove quotes
                     value = newline_unescape(value)
-                value = unicode_unescape(value)
                 value = simple_unescape(value)
+                value = unicode_unescape(value)
             elif type_ == 'STRING':
                 value = css_value[1:-1]  # Remove quotes
                 value = newline_unescape(value)
-                value = unicode_unescape(value)
                 value = simple_unescape(value)
+                value = unicode_unescape(value)
             # BAD_STRING can only be one of:
             # * Unclosed string at the end of the stylesheet:
             #   Close the string, but this is not an error.
@@ -120,8 +120,8 @@ def tokenize_flat(css_source, ignore_comments=True,
                 type_ = 'STRING'
                 value = css_value[1:]  # Remove quote
                 value = newline_unescape(value)
-                value = unicode_unescape(value)
                 value = simple_unescape(value)
+                value = unicode_unescape(value)
             else:
                 value = css_value
             tokens.append(Token(type_, css_value, value, unit, line, column))

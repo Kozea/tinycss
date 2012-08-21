@@ -79,7 +79,11 @@ foo(int x) {\
 
     # Cancel the meaning of special characters
     (r'"Lore\m Ipsum"', [('STRING', 'Lorem Ipsum')]),  # or not specal
+    (r'"Lorem \49psum"', [('STRING', 'Lorem Ipsum')]),
+    (r'"Lorem \49 psum"', [('STRING', 'Lorem Ipsum')]),
     (r'"Lorem\"Ipsum"', [('STRING', 'Lorem"Ipsum')]),
+    (r'"Lorem\\Ipsum"', [('STRING', r'Lorem\Ipsum')]),
+    (r'"Lorem\5c Ipsum"', [('STRING', r'Lorem\Ipsum')]),
     (r'Lorem\+Ipsum', [('IDENT', 'Lorem+Ipsum')]),
     (r'Lorem+Ipsum', [('IDENT', 'Lorem'), ('DELIM', '+'), ('IDENT', 'Ipsum')]),
     (r'url(foo\).png)', [('URI', 'foo).png')]),

@@ -43,7 +43,8 @@ MACROS = r'''
     w	[ \t\r\n\f]*
     nonascii	[^\0-\237]
     unicode	\\([0-9a-f]{{1,6}})(\r\n|[ \n\r\t\f])?
-    escape	{unicode}|\\[^\n\r\f0-9a-f]
+    simple_escape	[^\n\r\f0-9a-f]
+    escape	{unicode}|\\{simple_escape}
     nmstart	[_a-z]|{nonascii}|{escape}
     nmchar	[_a-z0-9-]|{nonascii}|{escape}
     name	{nmchar}+
@@ -205,7 +206,7 @@ NEWLINE_UNESCAPE = functools.partial(
     '')
 
 SIMPLE_UNESCAPE = functools.partial(
-    re.compile(r'\\(.)').sub,
+    re.compile(r'\\(%s)' % COMPILED_MACROS['simple_escape'] , re.I).sub,
     # Same as r'\1', but faster on CPython
     operator.methodcaller('group', 1))
 
