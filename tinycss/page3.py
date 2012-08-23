@@ -130,7 +130,7 @@ class CSSPage3Parser(CSS21Parser):
             The ``head`` attribute of an unparsed :class:`AtRule`.
         :returns:
             A page selector. For CSS 2.1, this is 'first', 'left', 'right'
-            or None.
+            or None. 'blank' is added by GCPM.
         :raises:
             :class`~parsing.ParseError` on invalid selectors
 
@@ -151,7 +151,8 @@ class CSSPage3Parser(CSS21Parser):
                 and head[1].type == 'IDENT'):
             pseudo_class = head[1].value
             specificity = {
-                'first': (1, 0), 'left': (0, 1), 'right': (0, 1),
+                'first': (1, 0), 'blank': (1, 0),
+                'left': (0, 1), 'right': (0, 1),
             }.get(pseudo_class)
             if specificity:
                 return (name, pseudo_class), (name_specificity + specificity)
