@@ -24,6 +24,7 @@ from . import assert_errors
     ('@page :first {}', (None, 'first'), (0, 1, 0), []),
     ('@page:left{}', (None, 'left'), (0, 0, 1), []),
     ('@page :right {}', (None, 'right'), (0, 0, 1), []),
+    ('@page  :blank{}', (None, 'blank'), (0, 1, 0), []),
     ('@page :last {}', None, None, ['invalid @page selector']),
     ('@page : first {}', None, None, ['invalid @page selector']),
 
