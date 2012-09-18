@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 
 import pytest
 
+from tinycss.css21 import CSS21Parser
 from tinycss.page3 import CSSPage3Parser
 from .test_tokenizer import jsonify
 from . import assert_errors
@@ -99,3 +100,21 @@ def test_content(css, expected_declarations, expected_rules, expected_errors):
     rules = [(margin_rule.at_keyword, declarations(margin_rule))
              for margin_rule in rule.at_rules]
     assert rules == expected_rules
+
+
+def test_in_at_media():
+    css = '@media print { @page { size: A4 } }'
+
+    stylesheet = CSS21Parser().parse_stylesheet(css)
+    assert_errors(stylesheet.errors, ['@page rule not allowed in @media'])
+    at_media_rule, = stylesheet.rules
+    assert at_media_rule.at_keyword == '@media'
+    assert at_media_rule.rules == []
+
+    stylesheet = CSSPage3Parser().parse_stylesheet(css)
+    assert stylesheet.errors == []
+    at_media_rule, = stylesheet.rules
+    at_page_rule, = at_media_rule.rules
+    assert at_media_rule.at_keyword == '@media'
+    assert at_page_rule.at_keyword == '@page'
+    assert len(at_page_rule.declarations) == 1

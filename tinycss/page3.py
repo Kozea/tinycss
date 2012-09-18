@@ -107,6 +107,8 @@ class CSSPage3Parser(CSS21Parser):
         '@right-bottom',
     ]
 
+    at_page_allowed_contexts = ['stylesheet', '@media']
+
     def parse_at_rule(self, rule, previous_rules, errors, context):
         if rule.at_keyword in self.PAGE_MARGIN_AT_KEYWORDS:
             if context != '@page':
@@ -150,6 +152,8 @@ class CSSPage3Parser(CSS21Parser):
         if (len(head) == 2 and head[0].type == ':'
                 and head[1].type == 'IDENT'):
             pseudo_class = head[1].value
+            # :blank is defined in GCPM:
+            # http://dev.w3.org/csswg/css3-gcpm/#styling-blank-pages
             specificity = {
                 'first': (1, 0), 'blank': (1, 0),
                 'left': (0, 1), 'right': (0, 1),

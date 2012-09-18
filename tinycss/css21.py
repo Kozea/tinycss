@@ -482,6 +482,8 @@ class CSS21Parser(object):
         return AtRule(at_keyword, head, body,
                       at_keyword_token.line, at_keyword_token.column)
 
+    at_page_allowed_contexts = ['stylesheet']
+
     def parse_at_rule(self, rule, previous_rules, errors, context):
         """Parse an at-rule.
 
@@ -508,7 +510,7 @@ class CSS21Parser(object):
 
         """
         if rule.at_keyword == '@page':
-            if context != 'stylesheet':
+            if context not in self.at_page_allowed_contexts:
                 raise ParseError(rule, '@page rule not allowed in ' + context)
             selector, specificity = self.parse_page_selector(rule.head)
             if rule.body is None:
