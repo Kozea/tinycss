@@ -5,10 +5,13 @@ tinycss changelog
 Version 0.3
 -----------
 
-Not released yet.
+Released on 2012-09-18.
 
-* Fix a bug when parsing \5c (an escaped antislash.)
-
+* Fix a bug when parsing ``\5c`` (an escaped antislash.)
+* Allow ``@page`` rules inside ``@media`` rules in ``CSSPage3Parser``, as
+  per `css3-page <http://dev.w3.org/csswg/css3-page/#syntax-page-selector>`_.
+* Add the ``:blank`` pseudo-class on ``@page``, as `defined in css3-gcpm
+  <http://dev.w3.org/csswg/css3-gcpm/#styling-blank-pages>`_.
 
 
 Version 0.2
