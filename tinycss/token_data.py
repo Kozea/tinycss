@@ -328,6 +328,16 @@ class Token(object):
     def __repr__(self):
         return ('<Token {0.type} at {0.line}:{0.column} {0.value!r}{1}>'
                 .format(self, self.unit or ''))
+    
+    def __eq__(self, other):
+        if type(self) != type(other):
+            raise TypeError("Cannot compare %s and %s" % type(self), type(other))
+        else: return all(
+            self.type_ == other.type_,
+            self._as_css == other._as_css,
+            self.value == other.value,
+            self.unit == other.unit,
+        )
 
 
 class ContainerToken(object):
