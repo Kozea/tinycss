@@ -1,4 +1,4 @@
-# coding: utf8
+# coding: utf-8
 """
     Tests for the CSS 2.1 parser
     ----------------------------
