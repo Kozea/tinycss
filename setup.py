@@ -46,6 +46,9 @@ with open(os.path.join(ROOT, 'README.rst'), 'rb') as fd:
     README = fd.read().decode('utf8')
 
 
+needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
+pytest_runner = ['pytest-runner'] if needs_pytest else []
+
 def run_setup(with_extension):
     if with_extension:
         extension_path = os.path.join('tinycss', 'speedups')
@@ -78,16 +81,21 @@ def run_setup(with_extension):
         description='tinycss is a complete yet simple CSS parser for Python.',
         long_description=README,
         classifiers=[
-            'Development Status :: 3 - Alpha',
+            'Development Status :: 4 - Beta',
             'Intended Audience :: Developers',
             'License :: OSI Approved :: BSD License',
             'Programming Language :: Python :: 2',
-            'Programming Language :: Python :: 2.6',
             'Programming Language :: Python :: 2.7',
             'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.1',
-            'Programming Language :: Python :: 3.2',
+            'Programming Language :: Python :: 3.3',
+            'Programming Language :: Python :: 3.4',
+            'Programming Language :: Python :: 3.5',
         ],
+        setup_requires=pytest_runner,
+        tests_require=[
+            'pytest-cov', 'pytest-flake8', 'pytest-isort', 'pytest-runner'],
+        extras_require={'test': (
+            'pytest-runner', 'pytest-cov', 'pytest-flake8', 'pytest-isort')},
         packages=['tinycss', 'tinycss.tests'],
         **kwargs
     )
