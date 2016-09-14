@@ -142,8 +142,8 @@ def test_font_feature_values_content(css, expected_rules, expected_errors):
         assert rule.at_keyword == '@font-feature-values'
 
         rules = [
-            (rule.at_keyword, [
+            (at_rule.at_keyword, [
                 (decl.name, list(jsonify(decl.value)))
-                for decl in rule.declarations])
-            for rule in rule.at_rules] if rule.at_rules else None
+                for decl in at_rule.declarations])
+            for at_rule in rule.at_rules] if rule.at_rules else None
         assert rules == expected_rules
