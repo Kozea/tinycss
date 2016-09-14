@@ -12,11 +12,9 @@
 
 from __future__ import unicode_literals
 
-from binascii import unhexlify
 import operator
 import re
-import sys
-
+from binascii import unhexlify
 
 __all__ = ['decode']  # Everything else is implementation detail
 
@@ -116,101 +114,101 @@ Slice = Slicer()
 
 ENCODING_MAGIC_NUMBERS = [
     ((Slice[:], ''), re.compile(
-        hex2re('EF BB BF 40 63 68 61 72 73 65 74 20 22')
-        + b'([^\x22]*?)'
-        + hex2re('22 3B')).match),
+        hex2re('EF BB BF 40 63 68 61 72 73 65 74 20 22') +
+        b'([^\x22]*?)' +
+        hex2re('22 3B')).match),
 
     ('UTF-8', re.compile(
         hex2re('EF BB BF')).match),
 
     ((Slice[:], ''), re.compile(
-        hex2re('40 63 68 61 72 73 65 74 20 22')
-        + b'([^\x22]*?)'
-        + hex2re('22 3B')).match),
+        hex2re('40 63 68 61 72 73 65 74 20 22') +
+        b'([^\x22]*?)' +
+        hex2re('22 3B')).match),
 
     ((Slice[1::2], '-BE'), re.compile(
         hex2re('FE FF 00 40 00 63 00 68 00 61 00 72 00 73 00 65 00'
-               '74 00 20 00 22')
-        + b'((\x00[^\x22])*?)'
-        + hex2re('00 22 00 3B')).match),
+               '74 00 20 00 22') +
+        b'((\x00[^\x22])*?)' +
+        hex2re('00 22 00 3B')).match),
 
     ((Slice[1::2], '-BE'), re.compile(
         hex2re('00 40 00 63 00 68 00 61 00 72 00 73 00 65 00 74 00'
-               '20 00 22')
-        + b'((\x00[^\x22])*?)'
-        + hex2re('00 22 00 3B')).match),
+               '20 00 22') +
+        b'((\x00[^\x22])*?)' +
+        hex2re('00 22 00 3B')).match),
 
     ((Slice[::2], '-LE'), re.compile(
         hex2re('FF FE 40 00 63 00 68 00 61 00 72 00 73 00 65 00 74'
-               '00 20 00 22 00')
-        + b'(([^\x22]\x00)*?)'
-        + hex2re('22 00 3B 00')).match),
+               '00 20 00 22 00') +
+        b'(([^\x22]\x00)*?)' +
+        hex2re('22 00 3B 00')).match),
 
     ((Slice[::2], '-LE'), re.compile(
         hex2re('40 00 63 00 68 00 61 00 72 00 73 00 65 00 74 00 20'
-               '00 22 00')
-        + b'(([^\x22]\x00)*?)'
-        + hex2re('22 00 3B 00')).match),
+               '00 22 00') +
+        b'(([^\x22]\x00)*?)' +
+        hex2re('22 00 3B 00')).match),
 
     ((Slice[3::4], '-BE'), re.compile(
         hex2re('00 00 FE FF 00 00 00 40 00 00 00 63 00 00 00 68 00'
                '00 00 61 00 00 00 72 00 00 00 73 00 00 00 65 00 00'
-               '00 74 00 00 00 20 00 00 00 22')
-        + b'((\x00\x00\x00[^\x22])*?)'
-        + hex2re('00 00 00 22 00 00 00 3B')).match),
+               '00 74 00 00 00 20 00 00 00 22') +
+        b'((\x00\x00\x00[^\x22])*?)' +
+        hex2re('00 00 00 22 00 00 00 3B')).match),
 
     ((Slice[3::4], '-BE'), re.compile(
         hex2re('00 00 00 40 00 00 00 63 00 00 00 68 00 00 00 61 00'
                '00 00 72 00 00 00 73 00 00 00 65 00 00 00 74 00 00'
-               '00 20 00 00 00 22')
-        + b'((\x00\x00\x00[^\x22])*?)'
-        + hex2re('00 00 00 22 00 00 00 3B')).match),
+               '00 20 00 00 00 22') +
+        b'((\x00\x00\x00[^\x22])*?)' +
+        hex2re('00 00 00 22 00 00 00 3B')).match),
 
 
-# Python does not support 2143 or 3412 endianness, AFAIK.
-# I guess we could fix it up ourselves but meh. Patches welcome.
+    # Python does not support 2143 or 3412 endianness, AFAIK.
+    # I guess we could fix it up ourselves but meh. Patches welcome.
 
-#    ((Slice[2::4], '-2143'), re.compile(
-#        hex2re('00 00 FF FE 00 00 40 00 00 00 63 00 00 00 68 00 00'
-#               '00 61 00 00 00 72 00 00 00 73 00 00 00 65 00 00 00'
-#               '74 00 00 00 20 00 00 00 22 00')
-#        + b'((\x00\x00[^\x22]\x00)*?)'
-#        + hex2re('00 00 22 00 00 00 3B 00')).match),
+    # ((Slice[2::4], '-2143'), re.compile(
+    #     hex2re('00 00 FF FE 00 00 40 00 00 00 63 00 00 00 68 00 00'
+    #            '00 61 00 00 00 72 00 00 00 73 00 00 00 65 00 00 00'
+    #            '74 00 00 00 20 00 00 00 22 00') +
+    #     b'((\x00\x00[^\x22]\x00)*?)' +
+    #     hex2re('00 00 22 00 00 00 3B 00')).match),
 
-#    ((Slice[2::4], '-2143'), re.compile(
-#        hex2re('00 00 40 00 00 00 63 00 00 00 68 00 00 00 61 00 00'
-#               '00 72 00 00 00 73 00 00 00 65 00 00 00 74 00 00 00'
-#               '20 00 00 00 22 00')
-#        + b'((\x00\x00[^\x22]\x00)*?)'
-#        + hex2re('00 00 22 00 00 00 3B 00')).match),
+    # ((Slice[2::4], '-2143'), re.compile(
+    #     hex2re('00 00 40 00 00 00 63 00 00 00 68 00 00 00 61 00 00'
+    #            '00 72 00 00 00 73 00 00 00 65 00 00 00 74 00 00 00'
+    #            '20 00 00 00 22 00') +
+    #     b'((\x00\x00[^\x22]\x00)*?)' +
+    #     hex2re('00 00 22 00 00 00 3B 00')).match),
 
-#    ((Slice[1::4], '-3412'), re.compile(
-#        hex2re('FE FF 00 00 00 40 00 00 00 63 00 00 00 68 00 00 00'
-#               '61 00 00 00 72 00 00 00 73 00 00 00 65 00 00 00 74'
-#               '00 00 00 20 00 00 00 22 00 00')
-#        + b'((\x00[^\x22]\x00\x00)*?)'
-#        + hex2re('00 22 00 00 00 3B 00 00')).match),
+    # ((Slice[1::4], '-3412'), re.compile(
+    #     hex2re('FE FF 00 00 00 40 00 00 00 63 00 00 00 68 00 00 00'
+    #            '61 00 00 00 72 00 00 00 73 00 00 00 65 00 00 00 74'
+    #            '00 00 00 20 00 00 00 22 00 00') +
+    #     b'((\x00[^\x22]\x00\x00)*?)' +
+    #     hex2re('00 22 00 00 00 3B 00 00')).match),
 
-#    ((Slice[1::4], '-3412'), re.compile(
-#        hex2re('00 40 00 00 00 63 00 00 00 68 00 00 00 61 00 00 00'
-#               '72 00 00 00 73 00 00 00 65 00 00 00 74 00 00 00 20'
-#               '00 00 00 22 00 00')
-#        + b'((\x00[^\x22]\x00\x00)*?)'
-#        + hex2re('00 22 00 00 00 3B 00 00')).match),
+    # ((Slice[1::4], '-3412'), re.compile(
+    #     hex2re('00 40 00 00 00 63 00 00 00 68 00 00 00 61 00 00 00'
+    #            '72 00 00 00 73 00 00 00 65 00 00 00 74 00 00 00 20'
+    #            '00 00 00 22 00 00') +
+    #     b'((\x00[^\x22]\x00\x00)*?)' +
+    #     hex2re('00 22 00 00 00 3B 00 00')).match),
 
     ((Slice[::4], '-LE'), re.compile(
         hex2re('FF FE 00 00 40 00 00 00 63 00 00 00 68 00 00 00 61'
                '00 00 00 72 00 00 00 73 00 00 00 65 00 00 00 74 00'
-               '00 00 20 00 00 00 22 00 00 00')
-        + b'(([^\x22]\x00\x00\x00)*?)'
-        + hex2re('22 00 00 00 3B 00 00 00')).match),
+               '00 00 20 00 00 00 22 00 00 00') +
+        b'(([^\x22]\x00\x00\x00)*?)' +
+        hex2re('22 00 00 00 3B 00 00 00')).match),
 
     ((Slice[::4], '-LE'), re.compile(
         hex2re('40 00 00 00 63 00 00 00 68 00 00 00 61 00 00 00 72'
                '00 00 00 73 00 00 00 65 00 00 00 74 00 00 00 20 00'
-               '00 00 22 00 00 00')
-        + b'(([^\x22]\x00\x00\x00)*?)'
-        + hex2re('22 00 00 00 3B 00 00 00')).match),
+               '00 00 22 00 00 00') +
+        b'(([^\x22]\x00\x00\x00)*?)' +
+        hex2re('22 00 00 00 3B 00 00 00')).match),
 
     ('UTF-32-BE', re.compile(
         hex2re('00 00 FE FF')).match),
@@ -218,11 +216,11 @@ ENCODING_MAGIC_NUMBERS = [
     ('UTF-32-LE', re.compile(
         hex2re('FF FE 00 00')).match),
 
-#    ('UTF-32-2143', re.compile(
-#        hex2re('00 00 FF FE')).match),
+    # ('UTF-32-2143', re.compile(
+    #     hex2re('00 00 FF FE')).match),
 
-#    ('UTF-32-3412', re.compile(
-#        hex2re('FE FF 00 00')).match),
+    # ('UTF-32-3412', re.compile(
+    #     hex2re('FE FF 00 00')).match),
 
     ('UTF-16-BE', re.compile(
         hex2re('FE FF')).match),
@@ -231,24 +229,24 @@ ENCODING_MAGIC_NUMBERS = [
         hex2re('FF FE')).match),
 
 
-# Some of there are supported by Python, but I didn’t bother.
-# You know the story with patches ...
+    # Some of there are supported by Python, but I didn’t bother.
+    # You know the story with patches ...
 
-#    # as specified, transcoded from EBCDIC to ASCII
-#    ('as_specified-EBCDIC', re.compile(
-#        hex2re('7C 83 88 81 99 A2 85 A3 40 7F')
-#        + b'([^\x7F]*?)'
-#        + hex2re('7F 5E')).match),
+    # # as specified, transcoded from EBCDIC to ASCII
+    # ('as_specified-EBCDIC', re.compile(
+    #     hex2re('7C 83 88 81 99 A2 85 A3 40 7F')
+    #     + b'([^\x7F]*?)'
+    #     + hex2re('7F 5E')).match),
 
-#    # as specified, transcoded from IBM1026 to ASCII
-#    ('as_specified-IBM1026', re.compile(
-#        hex2re('AE 83 88 81 99 A2 85 A3 40 FC')
-#        + b'([^\xFC]*?)'
-#        + hex2re('FC 5E')).match),
+    # # as specified, transcoded from IBM1026 to ASCII
+    # ('as_specified-IBM1026', re.compile(
+    #     hex2re('AE 83 88 81 99 A2 85 A3 40 FC')
+    #     + b'([^\xFC]*?)'
+    #     + hex2re('FC 5E')).match),
 
-#    # as specified, transcoded from GSM 03.38 to ASCII
-#    ('as_specified-GSM_03.38', re.compile(
-#        hex2re('00 63 68 61 72 73 65 74 20 22')
-#        + b'([^\x22]*?)'
-#        + hex2re('22 3B')).match),
+    # # as specified, transcoded from GSM 03.38 to ASCII
+    # ('as_specified-GSM_03.38', re.compile(
+    #     hex2re('00 63 68 61 72 73 65 74 20 22')
+    #     + b'([^\x22]*?)'
+    #     + hex2re('22 3B')).match),
 ]

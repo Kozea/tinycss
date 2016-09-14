@@ -11,10 +11,10 @@
 from __future__ import unicode_literals
 
 import pytest
-
 from tinycss.page3 import CSSPage3Parser
-from .test_tokenizer import jsonify
+
 from . import assert_errors
+from .test_tokenizer import jsonify
 
 
 @pytest.mark.parametrize(('css', 'expected_selector',
@@ -56,7 +56,7 @@ def test_selectors(css, expected_selector, expected_specificity,
 
 
 @pytest.mark.parametrize(('css', 'expected_declarations',
-                          'expected_rules','expected_errors'), [
+                          'expected_rules', 'expected_errors'), [
     ('@page {}', [], [], []),
     ('@page { foo: 4; bar: z }',
         [('foo', [('INTEGER', 4)]), ('bar', [('IDENT', 'z')])], [], []),
@@ -68,7 +68,7 @@ def test_selectors(css, expected_selector, expected_specificity,
         [('foo', [('INTEGER', 4)]), ('bar', [('IDENT', 'z')])],
         [('@top-center', [('content', [('STRING', 'Awesome Title')])]),
          ('@bottom-left', [('content', [
-            ('FUNCTION', 'counter', [('IDENT', 'page')])])])],
+             ('FUNCTION', 'counter', [('IDENT', 'page')])])])],
         []),
     ('''@page { foo: 4;
                 @bottom-top { content: counter(page) }

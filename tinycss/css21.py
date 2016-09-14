@@ -11,13 +11,15 @@
 """
 
 from __future__ import unicode_literals
+
 from itertools import chain, islice
 
 from .decoding import decode
+from .parsing import (
+    ParseError, remove_whitespace, split_on_comma, strip_whitespace,
+    validate_any, validate_value)
 from .token_data import TokenList
 from .tokenizer import tokenize_grouped
-from .parsing import (strip_whitespace, remove_whitespace, split_on_comma,
-                      validate_value, validate_block, validate_any, ParseError)
 
 
 #  stylesheet  : [ CDO | CDC | S | statement ]*;
@@ -293,7 +295,6 @@ class ImportRule(object):
                 ' {0.uri}>'.format(self))
 
 
-
 def _remove_at_charset(tokens):
     """Remove any valid @charset at the beggining of a token stream.
 
@@ -307,8 +308,8 @@ def _remove_at_charset(tokens):
     header = list(islice(tokens, 4))
     if [t.type for t in header] == ['ATKEYWORD', 'S', 'STRING', ';']:
         atkw, space, string, semicolon = header
-        if ((atkw.value, space.value) == ('@charset', ' ')
-                and string.as_css()[0] == '"'):
+        if ((atkw.value, space.value) == ('@charset', ' ') and
+                string.as_css()[0] == '"'):
             # Found a valid @charset rule, only keep what’s after it.
             return tokens
     return chain(header, tokens)
@@ -331,7 +332,7 @@ class CSS21Parser(object):
     # User API:
 
     def parse_stylesheet_file(self, css_file, protocol_encoding=None,
-                             linking_encoding=None, document_encoding=None):
+                              linking_encoding=None, document_encoding=None):
         """Parse a stylesheet from a file or filename.
 
         Character encoding-related parameters and behavior are the same
@@ -512,8 +513,9 @@ class CSS21Parser(object):
                 raise ParseError(rule, '@page rule not allowed in ' + context)
             selector, specificity = self.parse_page_selector(rule.head)
             if rule.body is None:
-                raise ParseError(rule,
-                    'invalid {0} rule: missing block'.format(rule.at_keyword))
+                raise ParseError(
+                    rule, 'invalid {0} rule: missing block'.format(
+                        rule.at_keyword))
             declarations, at_rules, rule_errors = \
                 self.parse_declarations_and_at_rules(rule.body, '@page')
             errors.extend(rule_errors)
@@ -527,32 +529,34 @@ class CSS21Parser(object):
                 raise ParseError(rule, 'expected media types for @media')
             media = self.parse_media(rule.head)
             if rule.body is None:
-                raise ParseError(rule,
-                    'invalid {0} rule: missing block'.format(rule.at_keyword))
+                raise ParseError(
+                    rule, 'invalid {0} rule: missing block'.format(
+                        rule.at_keyword))
             rules, rule_errors = self.parse_rules(rule.body, '@media')
             errors.extend(rule_errors)
             return MediaRule(media, rules, rule.line, rule.column)
 
         elif rule.at_keyword == '@import':
             if context != 'stylesheet':
-                raise ParseError(rule,
-                    '@import rule not allowed in ' + context)
+                raise ParseError(
+                    rule, '@import rule not allowed in ' + context)
             for previous_rule in previous_rules:
                 if previous_rule.at_keyword not in ('@charset', '@import'):
                     if previous_rule.at_keyword:
                         type_ = 'an {0} rule'.format(previous_rule.at_keyword)
                     else:
                         type_ = 'a ruleset'
-                    raise ParseError(previous_rule,
+                    raise ParseError(
+                        previous_rule,
                         '@import rule not allowed after ' + type_)
             head = rule.head
             if not head:
-                raise ParseError(rule,
-                    'expected URI or STRING for @import rule')
+                raise ParseError(
+                    rule, 'expected URI or STRING for @import rule')
             if head[0].type not in ('URI', 'STRING'):
-                raise ParseError(rule,
-                    'expected URI or STRING for @import rule, got '
-                    + head[0].type)
+                raise ParseError(
+                    rule, 'expected URI or STRING for @import rule, got ' +
+                    head[0].type)
             uri = head[0].value
             media = self.parse_media(strip_whitespace(head[1:]))
             if rule.body is not None:
@@ -565,8 +569,9 @@ class CSS21Parser(object):
             raise ParseError(rule, 'mis-placed or malformed @charset rule')
 
         else:
-            raise ParseError(rule, 'unknown at-rule in {0} context: {1}'
-                                    .format(context, rule.at_keyword))
+            raise ParseError(
+                rule, 'unknown at-rule in {0} context: {1}'.format(
+                    context, rule.at_keyword))
 
     def parse_media(self, tokens):
         """For CSS 2.1, parse a list of media types.
@@ -588,8 +593,9 @@ class CSS21Parser(object):
             if types == ['IDENT']:
                 media_types.append(part[0].value)
             else:
-                raise ParseError(tokens[0], 'expected a media type'
-                    + ((', got ' + ', '.join(types)) if types else ''))
+                raise ParseError(
+                    tokens[0], 'expected a media type' +
+                    ((', got ' + ', '.join(types)) if types else ''))
         return media_types
 
     def parse_page_selector(self, tokens):
@@ -607,8 +613,8 @@ class CSS21Parser(object):
         """
         if not tokens:
             return None, (0, 0)
-        if (len(tokens) == 2 and tokens[0].type == ':'
-                and tokens[1].type == 'IDENT'):
+        if (len(tokens) == 2 and tokens[0].type == ':' and
+                tokens[1].type == 'IDENT'):
             pseudo_class = tokens[1].value
             specificity = {
                 'first': (1, 0), 'left': (0, 1), 'right': (0, 1),
@@ -677,8 +683,9 @@ class CSS21Parser(object):
             for one ruleset.
         :return:
             a tuple of a :class:`RuleSet` and an error list.
-            The errors are recovered :class:`~.parsing.ParseError` in declarations.
-            (Parsing continues from the next declaration on such errors.)
+            The errors are recovered :class:`~.parsing.ParseError` in
+            declarations. (Parsing continues from the next declaration on such
+            errors.)
         :raises:
             :class:`~.parsing.ParseError` if the selector is invalid for the
             core grammar.
@@ -765,8 +772,9 @@ class CSS21Parser(object):
             # CSS syntax is case-insensitive
             property_name = name_token.value.lower()
         else:
-            raise ParseError(name_token,
-                'expected a property name, got {0}'.format(name_token.type))
+            raise ParseError(
+                name_token, 'expected a property name, got {0}'.format(
+                    name_token.type))
 
         token = name_token  # In case ``tokens`` is now empty
         for token in tokens:

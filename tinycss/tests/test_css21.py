@@ -9,16 +9,16 @@
 
 
 from __future__ import unicode_literals
+
 import io
 import os
 import tempfile
 
 import pytest
-
 from tinycss.css21 import CSS21Parser
 
-from .test_tokenizer import jsonify
 from . import assert_errors
+from .test_tokenizer import jsonify
 
 
 def parse_bytes(css_bytes, kwargs):
@@ -49,7 +49,7 @@ def parse_filename(css_bytes, kwargs):
         ('@import "é";'.encode('utf8'), {}, 'é'),
         ('@import "é";'.encode('utf16'), {}, 'é'),  # with a BOM
         ('@import "é";'.encode('latin1'), {}, 'é'),
-        ('@import "£";'.encode('Shift-JIS'), {}, '\x81\x92'), # latin1 mojibake
+        ('@import "£";'.encode('Shift-JIS'), {}, '\x81\x92'),  # lat1 mojibake
         ('@charset "Shift-JIS";@import "£";'.encode('Shift-JIS'), {}, '£'),
         (' @charset "Shift-JIS";@import "£";'.encode('Shift-JIS'), {},
             '\x81\x92'),
@@ -77,7 +77,8 @@ def test_bytes(css_bytes, kwargs, expected_result, parse):
     ('foo{} @lipsum{} bar{}', 2,
         ['unknown at-rule in stylesheet context: @lipsum']),
     ('@charset "ascii"; foo {}', 1, []),
-    (' @charset "ascii"; foo {}', 1, ['mis-placed or malformed @charset rule']),
+    (' @charset "ascii"; foo {}', 1, [
+        'mis-placed or malformed @charset rule']),
     ('@charset ascii; foo {}', 1, ['mis-placed or malformed @charset rule']),
     ('foo {} @charset "ascii";', 1, ['mis-placed or malformed @charset rule']),
 ])
@@ -109,8 +110,8 @@ def test_at_rules(css_source, expected_rules, expected_errors):
     ('a{b:4}', [('a', [('b', [('INTEGER', 4)])])], []),
 
     ('@page {\t b: 4; @margin}', [('@page', [], [
-       ('S', '\t '), ('IDENT', 'b'), (':', ':'), ('S', ' '), ('INTEGER', 4),
-       (';', ';'), ('S', ' '), ('ATKEYWORD', '@margin'),
+        ('S', '\t '), ('IDENT', 'b'), (':', ':'), ('S', ' '), ('INTEGER', 4),
+        (';', ';'), ('S', ' '), ('ATKEYWORD', '@margin'),
     ])], []),
 
     ('foo', [], ['no declaration block found']),

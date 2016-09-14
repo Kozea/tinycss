@@ -95,6 +95,7 @@ def validate_value(tokens):
         else:
             validate_any(token, 'property value')
 
+
 def validate_block(tokens, context):
     """
     :raises:
@@ -132,8 +133,8 @@ def validate_any(token, context):
             adjective = 'unmatched'
         else:
             adjective = 'unexpected'
-        raise ParseError(token,
-            '{0} {1} token in {2}'.format(adjective, type_, context))
+        raise ParseError(
+            token, '{0} {1} token in {2}'.format(adjective, type_, context))
 
 
 class ParseError(ValueError):

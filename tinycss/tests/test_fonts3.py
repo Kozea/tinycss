@@ -11,10 +11,10 @@
 from __future__ import unicode_literals
 
 import pytest
-
 from tinycss.fonts3 import CSSFonts3Parser
-from .test_tokenizer import jsonify
+
 from . import assert_errors
+from .test_tokenizer import jsonify
 
 
 @pytest.mark.parametrize(('css', 'expected_family_names', 'expected_errors'), [
@@ -43,8 +43,8 @@ from . import assert_errors
     ('@font-feature-values #Foo {}', None, [
         'invalid @font-feature-values selector']),
     # TODO: this currently works but should not work
-    #('@font-feature-values test@foo {}', None, [
-    #    'invalid @font-feature-values selector']),
+    # ('@font-feature-values test@foo {}', None, [
+    #     'invalid @font-feature-values selector']),
     ('@font-feature-values Hawaii 5-0 {}', None, [
         'invalid @font-feature-values selector']),
 ])
@@ -127,10 +127,10 @@ def test_font_face_content(css, expected_declarations, expected_errors):
                 ('sharp-terminals', [
                     ('INTEGER', 16), ('S', ' '), ('INTEGER', 1)])]),
             ('@styleset', [('top', [('INTEGER', 9000)])])], [
-                        'unexpected ; token in selector',
-                        'expected a property name, got ATKEYWORD',
-                        'expected a property name, got ATKEYWORD',
-                        'no declaration block found for ruleset']),
+                'unexpected ; token in selector',
+                'expected a property name, got ATKEYWORD',
+                'expected a property name, got ATKEYWORD',
+                'no declaration block found for ruleset']),
     ])
 def test_font_feature_values_content(css, expected_rules, expected_errors):
     stylesheet = CSSFonts3Parser().parse_stylesheet(css)

@@ -10,13 +10,12 @@
 
 from __future__ import unicode_literals
 
-import sys
 import os
+import sys
 
 import pytest
-
 from tinycss.tokenizer import (
-    python_tokenize_flat, cython_tokenize_flat, regroup)
+    cython_tokenize_flat, python_tokenize_flat, regroup)
 
 
 def test_speedups():
@@ -29,100 +28,94 @@ def test_speedups():
 
 
 @pytest.mark.parametrize(('tokenize', 'css_source', 'expected_tokens'), [
-  (tokenize,) + test_data
-  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
-  for test_data in [
-    ('', []),
-    ('red -->',
-        [('IDENT', 'red'), ('S', ' '), ('CDC', '-->')]),
-    # Longest match rule: no CDC
-    ('red-->',
-        [('IDENT', 'red--'), ('DELIM', '>')]),
+    (tokenize,) + test_data
+    for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+    for test_data in [
+        ('', []),
+        ('red -->', [('IDENT', 'red'), ('S', ' '), ('CDC', '-->')]),
+        # Longest match rule: no CDC
+        ('red-->', [('IDENT', 'red--'), ('DELIM', '>')]),
+        (r'p[example="foo(int x) {    this.x = x;}"]', [
+            ('IDENT', 'p'),
+            ('[', '['),
+            ('IDENT', 'example'),
+            ('DELIM', '='),
+            ('STRING', 'foo(int x) {    this.x = x;}'),
+            (']', ']')]),
 
-    (r'''p[example="\
-foo(int x) {\
-    this.x = x;\
-}\
-"]''', [
-        ('IDENT', 'p'),
-        ('[', '['),
-        ('IDENT', 'example'),
-        ('DELIM', '='),
-        ('STRING', 'foo(int x) {    this.x = x;}'),
-        (']', ']')]),
+        # Numbers are parsed
+        ('42 .5 -4pX 1.25em 30%', [
+            ('INTEGER', 42), ('S', ' '),
+            ('NUMBER', .5), ('S', ' '),
+            # units are normalized to lower-case:
+            ('DIMENSION', -4, 'px'), ('S', ' '),
+            ('DIMENSION', 1.25, 'em'), ('S', ' '),
+            ('PERCENTAGE', 30, '%')]),
 
-    #### Numbers are parsed
-    ('42 .5 -4pX 1.25em 30%',
-        [('INTEGER', 42), ('S', ' '),
-         ('NUMBER', .5), ('S', ' '),
-         # units are normalized to lower-case:
-         ('DIMENSION', -4, 'px'), ('S', ' '),
-         ('DIMENSION', 1.25, 'em'), ('S', ' '),
-         ('PERCENTAGE', 30, '%')]),
+        # URLs are extracted
+        ('url(foo.png)', [('URI', 'foo.png')]),
+        ('url("foo.png")', [('URI', 'foo.png')]),
 
-    #### URLs are extracted
-    ('url(foo.png)', [('URI', 'foo.png')]),
-    ('url("foo.png")', [('URI', 'foo.png')]),
+        # Escaping
 
-    #### Escaping
+        (r'/* Comment with a \ backslash */', [
+            ('COMMENT', '/* Comment with a \ backslash */')]),  # Unchanged
 
-    (r'/* Comment with a \ backslash */',
-        [('COMMENT', '/* Comment with a \ backslash */')]),  # Unchanged
+        # backslash followed by a newline in a string: ignored
+        ('"Lorem\\\nIpsum"', [('STRING', 'LoremIpsum')]),
 
-    # backslash followed by a newline in a string: ignored
-    ('"Lorem\\\nIpsum"', [('STRING', 'LoremIpsum')]),
+        # backslash followed by a newline outside a string: stands for itself
+        ('Lorem\\\nIpsum', [
+            ('IDENT', 'Lorem'), ('DELIM', '\\'),
+            ('S', '\n'), ('IDENT', 'Ipsum')]),
 
-    # backslash followed by a newline outside a string: stands for itself
-    ('Lorem\\\nIpsum', [
-        ('IDENT', 'Lorem'), ('DELIM', '\\'),
-        ('S', '\n'), ('IDENT', 'Ipsum')]),
+        # Cancel the meaning of special characters
+        (r'"Lore\m Ipsum"', [('STRING', 'Lorem Ipsum')]),  # or not specal
+        (r'"Lorem \49psum"', [('STRING', 'Lorem Ipsum')]),
+        (r'"Lorem \49 psum"', [('STRING', 'Lorem Ipsum')]),
+        (r'"Lorem\"Ipsum"', [('STRING', 'Lorem"Ipsum')]),
+        (r'"Lorem\\Ipsum"', [('STRING', r'Lorem\Ipsum')]),
+        (r'"Lorem\5c Ipsum"', [('STRING', r'Lorem\Ipsum')]),
+        (r'Lorem\+Ipsum', [('IDENT', 'Lorem+Ipsum')]),
+        (r'Lorem+Ipsum', [
+            ('IDENT', 'Lorem'), ('DELIM', '+'), ('IDENT', 'Ipsum')]),
+        (r'url(foo\).png)', [('URI', 'foo).png')]),
 
-    # Cancel the meaning of special characters
-    (r'"Lore\m Ipsum"', [('STRING', 'Lorem Ipsum')]),  # or not specal
-    (r'"Lorem \49psum"', [('STRING', 'Lorem Ipsum')]),
-    (r'"Lorem \49 psum"', [('STRING', 'Lorem Ipsum')]),
-    (r'"Lorem\"Ipsum"', [('STRING', 'Lorem"Ipsum')]),
-    (r'"Lorem\\Ipsum"', [('STRING', r'Lorem\Ipsum')]),
-    (r'"Lorem\5c Ipsum"', [('STRING', r'Lorem\Ipsum')]),
-    (r'Lorem\+Ipsum', [('IDENT', 'Lorem+Ipsum')]),
-    (r'Lorem+Ipsum', [('IDENT', 'Lorem'), ('DELIM', '+'), ('IDENT', 'Ipsum')]),
-    (r'url(foo\).png)', [('URI', 'foo).png')]),
+        # Unicode and backslash escaping
+        ('\\26 B', [('IDENT', '&B')]),
+        ('\\&B', [('IDENT', '&B')]),
+        ('@\\26\tB', [('ATKEYWORD', '@&B')]),
+        ('@\\&B', [('ATKEYWORD', '@&B')]),
+        ('#\\26\nB', [('HASH', '#&B')]),
+        ('#\\&B', [('HASH', '#&B')]),
+        ('\\26\r\nB(', [('FUNCTION', '&B(')]),
+        ('\\&B(', [('FUNCTION', '&B(')]),
+        (r'12.5\000026B', [('DIMENSION', 12.5, '&b')]),
+        (r'12.5\0000263B', [('DIMENSION', 12.5, '&3b')]),  # max 6 digits
+        (r'12.5\&B', [('DIMENSION', 12.5, '&b')]),
+        (r'"\26 B"', [('STRING', '&B')]),
+        (r"'\000026B'", [('STRING', '&B')]),
+        (r'"\&B"', [('STRING', '&B')]),
+        (r'url("\26 B")', [('URI', '&B')]),
+        (r'url(\26 B)', [('URI', '&B')]),
+        (r'url("\&B")', [('URI', '&B')]),
+        (r'url(\&B)', [('URI', '&B')]),
+        (r'Lorem\110000Ipsum', [('IDENT', 'Lorem\uFFFDIpsum')]),
 
-    # Unicode and backslash escaping
-    ('\\26 B', [('IDENT', '&B')]),
-    ('\\&B', [('IDENT', '&B')]),
-    ('@\\26\tB', [('ATKEYWORD', '@&B')]),
-    ('@\\&B', [('ATKEYWORD', '@&B')]),
-    ('#\\26\nB', [('HASH', '#&B')]),
-    ('#\\&B', [('HASH', '#&B')]),
-    ('\\26\r\nB(', [('FUNCTION', '&B(')]),
-    ('\\&B(', [('FUNCTION', '&B(')]),
-    (r'12.5\000026B', [('DIMENSION', 12.5, '&b')]),
-    (r'12.5\0000263B', [('DIMENSION', 12.5, '&3b')]),  # max 6 digits
-    (r'12.5\&B', [('DIMENSION', 12.5, '&b')]),
-    (r'"\26 B"', [('STRING', '&B')]),
-    (r"'\000026B'", [('STRING', '&B')]),
-    (r'"\&B"', [('STRING', '&B')]),
-    (r'url("\26 B")', [('URI', '&B')]),
-    (r'url(\26 B)', [('URI', '&B')]),
-    (r'url("\&B")', [('URI', '&B')]),
-    (r'url(\&B)', [('URI', '&B')]),
-    (r'Lorem\110000Ipsum', [('IDENT', 'Lorem\uFFFDIpsum')]),
+        # Bad strings
 
-    #### Bad strings
+        # String ends at EOF without closing: no error, parsed
+        ('"Lorem\\26Ipsum', [('STRING', 'Lorem&Ipsum')]),
+        # Unescaped newline: ends the string, error, unparsed
+        ('"Lorem\\26Ipsum\n', [
+            ('BAD_STRING', r'"Lorem\26Ipsum'), ('S', '\n')]),
+        # Tokenization restarts after the newline, so the second " starts
+        # a new string (which ends at EOF without errors, as above.)
+        ('"Lorem\\26Ipsum\ndolor" sit', [
+            ('BAD_STRING', r'"Lorem\26Ipsum'), ('S', '\n'),
+            ('IDENT', 'dolor'), ('STRING', ' sit')]),
 
-    # String ends at EOF without closing: no error, parsed
-    ('"Lorem\\26Ipsum', [('STRING', 'Lorem&Ipsum')]),
-    # Unescaped newline: ends the string, error, unparsed
-    ('"Lorem\\26Ipsum\n', [
-        ('BAD_STRING', r'"Lorem\26Ipsum'), ('S', '\n')]),
-    # Tokenization restarts after the newline, so the second " starts
-    # a new string (which ends at EOF without errors, as above.)
-    ('"Lorem\\26Ipsum\ndolor" sit', [
-        ('BAD_STRING', r'"Lorem\26Ipsum'), ('S', '\n'),
-        ('IDENT', 'dolor'), ('STRING', ' sit')]),
-
-]])
+    ]])
 def test_tokens(tokenize, css_source, expected_tokens):
     if tokenize is None:  # pragma: no cover
         pytest.skip('Speedups not available')
@@ -160,64 +153,64 @@ def test_positions(tokenize):
 
 
 @pytest.mark.parametrize(('tokenize', 'css_source', 'expected_tokens'), [
-  (tokenize,) + test_data
-  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
-  for test_data in [
-    ('', []),
-    (r'Lorem\26 "i\psum"4px', [
-        ('IDENT', 'Lorem&'), ('STRING', 'ipsum'), ('DIMENSION', 4)]),
+    (tokenize,) + test_data
+    for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+    for test_data in [
+        ('', []),
+        (r'Lorem\26 "i\psum"4px', [
+            ('IDENT', 'Lorem&'), ('STRING', 'ipsum'), ('DIMENSION', 4)]),
 
-    ('not([[lorem]]{ipsum (42)})', [
-        ('FUNCTION', 'not', [
-            ('[', [
+        ('not([[lorem]]{ipsum (42)})', [
+            ('FUNCTION', 'not', [
                 ('[', [
-                    ('IDENT', 'lorem'),
+                    ('[', [
+                        ('IDENT', 'lorem'),
+                    ]),
+                ]),
+                ('{', [
+                    ('IDENT', 'ipsum'),
+                    ('S', ' '),
+                    ('(', [
+                        ('INTEGER', 42),
+                    ])
+                ])
+            ])]),
+
+        # Close everything at EOF, no error
+        ('a[b{"d', [
+            ('IDENT', 'a'),
+            ('[', [
+                ('IDENT', 'b'),
+                ('{', [
+                    ('STRING', 'd'),
                 ]),
             ]),
-            ('{', [
-                ('IDENT', 'ipsum'),
-                ('S', ' '),
-                ('(', [
-                    ('INTEGER', 42),
-                ])
-            ])
-        ])]),
+        ]),
 
-    # Close everything at EOF, no error
-    ('a[b{"d', [
-        ('IDENT', 'a'),
-        ('[', [
-            ('IDENT', 'b'),
-            ('{', [
-                ('STRING', 'd'),
+        # Any remaining ), ] or } token is a nesting error
+        ('a[b{d]e}', [
+            ('IDENT', 'a'),
+            ('[', [
+                ('IDENT', 'b'),
+                ('{', [
+                    ('IDENT', 'd'),
+                    (']', ']'),  # The error is visible here
+                    ('IDENT', 'e'),
+                ]),
             ]),
         ]),
-    ]),
-
-    # Any remaining ), ] or } token is a nesting error
-    ('a[b{d]e}', [
-        ('IDENT', 'a'),
-        ('[', [
-            ('IDENT', 'b'),
-            ('{', [
-                ('IDENT', 'd'),
-                (']', ']'),  # The error is visible here
+        # ref:
+        ('a[b{d}e]', [
+            ('IDENT', 'a'),
+            ('[', [
+                ('IDENT', 'b'),
+                ('{', [
+                    ('IDENT', 'd'),
+                ]),
                 ('IDENT', 'e'),
             ]),
         ]),
-    ]),
-    # ref:
-    ('a[b{d}e]', [
-        ('IDENT', 'a'),
-        ('[', [
-            ('IDENT', 'b'),
-            ('{', [
-                ('IDENT', 'd'),
-            ]),
-            ('IDENT', 'e'),
-        ]),
-    ]),
-]])
+    ]])
 def test_token_grouping(tokenize, css_source, expected_tokens):
     if tokenize is None:  # pragma: no cover
         pytest.skip('Speedups not available')
@@ -239,27 +232,27 @@ def jsonify(tokens):
 
 
 @pytest.mark.parametrize(('tokenize', 'ignore_comments', 'expected_tokens'), [
-  (tokenize,) + test_data
-  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
-  for test_data in [
-    (False, [
-        ('COMMENT', '/* lorem */'),
-        ('S', ' '),
-        ('IDENT', 'ipsum'),
-        ('[', [
-            ('IDENT', 'dolor'),
-            ('COMMENT', '/* sit */'),
+    (tokenize,) + test_data
+    for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+    for test_data in [
+        (False, [
+            ('COMMENT', '/* lorem */'),
+            ('S', ' '),
+            ('IDENT', 'ipsum'),
+            ('[', [
+                ('IDENT', 'dolor'),
+                ('COMMENT', '/* sit */'),
+            ]),
+            ('BAD_COMMENT', '/* amet')
         ]),
-        ('BAD_COMMENT', '/* amet')
-    ]),
-    (True, [
-        ('S', ' '),
-        ('IDENT', 'ipsum'),
-        ('[', [
-            ('IDENT', 'dolor'),
+        (True, [
+            ('S', ' '),
+            ('IDENT', 'ipsum'),
+            ('[', [
+                ('IDENT', 'dolor'),
+            ]),
         ]),
-    ]),
-]])
+    ]])
 def test_comments(tokenize, ignore_comments, expected_tokens):
     if tokenize is None:  # pragma: no cover
         pytest.skip('Speedups not available')
@@ -270,20 +263,16 @@ def test_comments(tokenize, ignore_comments, expected_tokens):
 
 
 @pytest.mark.parametrize(('tokenize', 'css_source'), [
-  (tokenize, test_data)
-  for tokenize in (python_tokenize_flat, cython_tokenize_flat)
-  for test_data in [
-    r'''p[example="\
-foo(int x) {\
-    this.x = x;\
-}\
-"]''',
-    '"Lorem\\26Ipsum\ndolor" sit',
-    '/* Lorem\nipsum */\fa {\n    color: red;\tcontent: "dolor\\\fsit" }',
-    'not([[lorem]]{ipsum (42)})',
-    'a[b{d]e}',
-    'a[b{"d',
-]])
+    (tokenize, test_data)
+    for tokenize in (python_tokenize_flat, cython_tokenize_flat)
+    for test_data in [
+        r'p[example="foo(int x) {    this.x = x;}"]',
+        '"Lorem\\26Ipsum\ndolor" sit',
+        '/* Lorem\nipsum */\fa {\n    color: red;\tcontent: "dolor\\\fsit" }',
+        'not([[lorem]]{ipsum (42)})',
+        'a[b{d]e}',
+        'a[b{"d',
+    ]])
 def test_token_serialize_css(tokenize, css_source):
     if tokenize is None:  # pragma: no cover
         pytest.skip('Speedups not available')

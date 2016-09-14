@@ -17,20 +17,20 @@ from __future__ import unicode_literals
 from . import token_data
 
 
-def tokenize_flat(css_source, ignore_comments=True,
-    # Make these local variable to avoid global lookups in the loop
-    tokens_dispatch=token_data.TOKEN_DISPATCH,
-    unicode_unescape=token_data.UNICODE_UNESCAPE,
-    newline_unescape=token_data.NEWLINE_UNESCAPE,
-    simple_unescape=token_data.SIMPLE_UNESCAPE,
-    find_newlines=token_data.FIND_NEWLINES,
-    Token=token_data.Token,
-    len=len,
-    int=int,
-    float=float,
-    list=list,
-    _None=None,
-):
+def tokenize_flat(
+        css_source, ignore_comments=True,
+        # Make these local variable to avoid global lookups in the loop
+        tokens_dispatch=token_data.TOKEN_DISPATCH,
+        unicode_unescape=token_data.UNICODE_UNESCAPE,
+        newline_unescape=token_data.NEWLINE_UNESCAPE,
+        simple_unescape=token_data.SIMPLE_UNESCAPE,
+        find_newlines=token_data.FIND_NEWLINES,
+        Token=token_data.Token,
+        len=len,
+        int=int,
+        float=float,
+        list=list,
+        _None=None):
     """
     :param css_source:
         CSS as an unicode string
@@ -158,10 +158,9 @@ def regroup(tokens):
     tokens = iter(tokens)
     eof = [False]
 
-    def _regroup_inner(stop_at=None,
-            tokens=tokens, pairs=pairs, eof=eof,
-            ContainerToken=token_data.ContainerToken,
-            FunctionToken=token_data.FunctionToken):
+    def _regroup_inner(stop_at=None, tokens=tokens, pairs=pairs, eof=eof,
+                       ContainerToken=token_data.ContainerToken,
+                       FunctionToken=token_data.FunctionToken):
         for token in tokens:
             type_ = token.type
             if type_ == stop_at:

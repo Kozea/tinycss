@@ -1,9 +1,10 @@
+import os.path
 import re
 import sys
-import os.path
-from setuptools import setup, Extension
 from distutils.errors import (
     CCompilerError, DistutilsExecError, DistutilsPlatformError)
+from setuptools import Extension, setup
+
 try:
     from Cython.Distutils import build_ext
     import Cython.Compiler.Version
@@ -15,12 +16,14 @@ except ImportError:
 
 ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError)
 if sys.platform == 'win32' and sys.version_info > (2, 6):
-   # 2.6's distutils.msvc9compiler can raise an IOError when failing to
-   # find the compiler
-   ext_errors += (IOError,)
+    # 2.6's distutils.msvc9compiler can raise an IOError when failing to
+    # find the compiler
+    ext_errors += (IOError,)
+
 
 class BuildFailed(Exception):
     pass
+
 
 class ve_build_ext(build_ext):
     # This class allows C extension building to fail.
@@ -49,6 +52,7 @@ with open(os.path.join(ROOT, 'README.rst'), 'rb') as fd:
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
 pytest_runner = ['pytest-runner'] if needs_pytest else []
 
+
 def run_setup(with_extension):
     if with_extension:
         extension_path = os.path.join('tinycss', 'speedups')
@@ -58,11 +62,11 @@ def run_setup(with_extension):
         else:
             extension_path += '.c'
             if not os.path.exists(extension_path):
-                print ("WARNING: Trying to build without Cython, but "
-                       "pre-generated '%s' does not seem to be available."
-                       % extension_path)
+                print("WARNING: Trying to build without Cython, but "
+                      "pre-generated '%s' does not seem to be available."
+                      % extension_path)
             else:
-                print ('Building without Cython.')
+                print('Building without Cython.')
         kwargs = dict(
             cmdclass=dict(build_ext=ve_build_ext),
             ext_modules=[Extension('tinycss.speedups',

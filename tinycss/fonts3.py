@@ -12,7 +12,7 @@
     :license: BSD, see LICENSE for more details.
 """
 
-from __future__ import unicode_literals, division
+from __future__ import division, unicode_literals
 
 from .css21 import CSS21Parser, ParseError
 
@@ -135,14 +135,16 @@ class CSSFonts3Parser(CSS21Parser):
     def parse_at_rule(self, rule, previous_rules, errors, context):
         if rule.at_keyword == '@font-face':
             if rule.head:
-                raise ParseError(rule.head[0],
-                    'unexpected %s token in %s rule header'
-                    % (rule.head[0].type, rule.at_keyword))
+                raise ParseError(
+                    rule.head[0],
+                    'unexpected {0} token in {1} rule header'.format(
+                        rule.head[0].type, rule.at_keyword))
             declarations, body_errors = self.parse_declaration_list(rule.body)
             errors.extend(body_errors)
             names = [declaration.name for declaration in declarations]
             if 'src' not in names or 'font-family' not in names:
-                raise ParseError(rule,
+                raise ParseError(
+                    rule,
                     '@font-face rule needs src and font-family descriptors')
             return FontFaceRule(
                 rule.at_keyword, declarations, rule.line, rule.column)
@@ -157,8 +159,9 @@ class CSSFonts3Parser(CSS21Parser):
                 rule.line, rule.column)
         elif rule.at_keyword in self.FONT_FEATURE_VALUES_AT_KEYWORDS:
             if context != '@font-feature-values':
-                raise ParseError(rule,
-                    '%s rule not allowed in %s' % (rule.at_keyword, context))
+                raise ParseError(
+                    rule, '{0} rule not allowed in {1}'.format(
+                        rule.at_keyword, context))
             declarations, body_errors = self.parse_declaration_list(rule.body)
             errors.extend(body_errors)
             return FontFeatureRule(

@@ -11,7 +11,6 @@
 from __future__ import unicode_literals
 
 import pytest
-
 from tinycss.decoding import decode
 
 
@@ -30,13 +29,13 @@ def params(css, encoding, use_bom=False, expect_error=False, **kwargs):
     params('£', 'ShiftJIS', linking_encoding='Shift-JIS'),
     params('£', 'ShiftJIS', document_encoding='Shift-JIS'),
     params('£', 'ShiftJIS', protocol_encoding='utf8',
-                          document_encoding='ShiftJIS'),
+           document_encoding='ShiftJIS'),
     params('@charset "utf8"; £', 'ShiftJIS', expect_error=True),
     params('@charset "utf£8"; £', 'ShiftJIS', expect_error=True),
     params('@charset "unknown-encoding"; £', 'ShiftJIS', expect_error=True),
     params('@charset "utf8"; £', 'ShiftJIS', document_encoding='ShiftJIS'),
     params('£', 'ShiftJIS', linking_encoding='utf8',
-                          document_encoding='ShiftJIS'),
+           document_encoding='ShiftJIS'),
     params('@charset "utf-32"; 𐂃', 'utf-32-be'),
     params('@charset "Shift-JIS"; £', 'ShiftJIS'),
     params('@charset "ISO-8859-8"; £', 'ShiftJIS', expect_error=True),
