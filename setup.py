@@ -78,7 +78,7 @@ def run_setup(with_extension):
     setup(
         name='tinycss',
         version=VERSION,
-        url='http://packages.python.org/tinycss/',
+        url='http://tinycss.readthedocs.io/',
         license='BSD',
         author='Simon Sapin',
         author_email='simon.sapin@exyr.org',
