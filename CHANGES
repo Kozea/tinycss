@@ -2,10 +2,20 @@ tinycss changelog
 =================
 
 
+Version 0.4
+-----------
+
+Released on 2016-09-23.
+
+* Add an __eq__ operator to Token object.
+* Support Fonts 3.
+
+
+
 Version 0.3
 -----------
 
-Not released yet.
+Released on 2012-09-18.
 
 * Fix a bug when parsing \5c (an escaped antislash.)
 
