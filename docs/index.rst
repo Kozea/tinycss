@@ -4,7 +4,7 @@
 Requirements
 ------------
 
-`tinycss is tested <https://travis-ci.org/Kozea/tinycss>` on CPython 2.7, 3.3,
+`tinycss is tested <https://travis-ci.org/Kozea/tinycss>`_ on CPython 2.7, 3.3,
 3.4 and 3.5 as well as PyPy 5.3 and PyPy3 2.4; it should work on any
 implementation of **Python 2.7 or later version (including 3.x)** of the
 language.
