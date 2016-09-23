@@ -141,11 +141,6 @@ class CSSFonts3Parser(CSS21Parser):
                         rule.head[0].type, rule.at_keyword))
             declarations, body_errors = self.parse_declaration_list(rule.body)
             errors.extend(body_errors)
-            names = [declaration.name for declaration in declarations]
-            if 'src' not in names or 'font-family' not in names:
-                raise ParseError(
-                    rule,
-                    '@font-face rule needs src and font-family descriptors')
             return FontFaceRule(
                 rule.at_keyword, declarations, rule.line, rule.column)
         elif rule.at_keyword == '@font-feature-values':

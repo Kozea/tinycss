@@ -61,12 +61,7 @@ def test_font_feature_values_selectors(css, expected_family_names,
 
 
 @pytest.mark.parametrize(('css', 'expected_declarations', 'expected_errors'), [
-    ('@font-face {}', None, [
-        '@font-face rule needs src and font-family descriptors']),
-    ('@font-face {src:"lol"}', None, [
-        '@font-face rule needs src and font-family descriptors']),
-    ('@font-face {font-family:"lol"}', None, [
-        '@font-face rule needs src and font-family descriptors']),
+    ('@font-face {}', [], []),
     ('@font-face test { src: "lol"; font-family: "bar" }', None, [
         'unexpected IDENT token in @font-face rule header']),
     ('@font-face { src: "lol"; font-family: "bar" }', [
