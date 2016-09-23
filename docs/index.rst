@@ -4,9 +4,10 @@
 Requirements
 ------------
 
-tinycss is tested on CPython 2.6, 2.7, 3.1 and 3.2 as well as PyPy 1.8;
-it should work on any implementation of **Python 2.6 or later version
-(including 3.x)** of the language.
+`tinycss is tested <https://travis-ci.org/Kozea/tinycss>` on CPython 2.7, 3.3,
+3.4 and 3.5 as well as PyPy 5.3 and PyPy3 2.4; it should work on any
+implementation of **Python 2.7 or later version (including 3.x)** of the
+language.
 
 Cython_ is used for optional accelerators but is only required for
 development versions on tinycss.

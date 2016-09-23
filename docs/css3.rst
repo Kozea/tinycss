@@ -99,6 +99,17 @@ Paged Media 3
 .. autoclass:: MarginRule
 
 
+.. module:: tinycss.fonts3
+
+Fonts 3
+-------
+
+.. autoclass:: CSSFonts3Parser
+.. autoclass:: FontFaceRule
+.. autoclass:: FontFeatureValuesRule
+.. autoclass:: FontFeatureRule
+
+
 Other CSS modules
 -----------------
 
