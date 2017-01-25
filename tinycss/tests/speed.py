@@ -63,6 +63,7 @@ def parse(tokenizer_name):
         result.append((selector, declarations))
     return result
 
+
 parse_cython = functools.partial(parse, 'cython_tokenize_flat')
 parse_python = functools.partial(parse, 'python_tokenize_flat')
 

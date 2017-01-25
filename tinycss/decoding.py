@@ -104,6 +104,7 @@ class Slicer(object):
     def __getitem__(self, slice_):
         return operator.itemgetter(slice_)
 
+
 Slice = Slicer()
 
 

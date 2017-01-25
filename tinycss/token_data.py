@@ -186,6 +186,7 @@ def _init():
         for names in dispatch
     )
 
+
 _init()
 
 
@@ -195,6 +196,7 @@ def _unicode_replace(match, int=int, unichr=unichr, maxunicode=sys.maxunicode):
         return unichr(codepoint)
     else:
         return '\N{REPLACEMENT CHARACTER}'  # U+FFFD
+
 
 UNICODE_UNESCAPE = functools.partial(
     re.compile(COMPILED_MACROS['unicode'], re.I).sub,
