@@ -1,11 +1,11 @@
 before_script:
-    - pip install Cython setuptools
+    - pip install --upgrade pip Cython setuptools
     - pip install --upgrade -e .[test]
 
 .before_script_alpine: &before_alpine
     before_script:
         - apk add --no-cache openssl gcc musl-dev
-        - pip install Cython setuptools
+        - pip install --upgrade pip Cython setuptools
         - pip install --upgrade -e .[test]
 
 .test_template: &test
